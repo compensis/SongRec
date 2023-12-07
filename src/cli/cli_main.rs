@@ -187,8 +187,16 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                                 .unwrap();
                             csv_writer.flush().unwrap();
                         }
+                        #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
                             println!("{}", song_name);
+                        }
+                        #[cfg(feature = "slowprint")]
+                        CLIOutputType::SongName => {
+                            clearscreen::clear().unwrap();
+                            let delay = std::time::Duration::from_millis(100);
+                            slowprint::slow_println(&message.song_name, delay);
+                            slowprint::slow_println(&message.artist_name, delay);
                         }
                     };
                 }
