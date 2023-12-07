@@ -142,6 +142,14 @@ cargo run --release
 
 For the latter, you will then find the project's binary (that you will be able to move or execute directly) at `target/release/songrec`.
 
+### Build without GUI
+
+This will compile the projet without the GUI (cli only):
+
+```bash
+cargo build --release --no-default-features
+```
+
 ## Sample usage
 
 Passing no arguments or using the `gui` subcommand will launch the GUI, and try to recognize audio real-time as soon as the application is launched:

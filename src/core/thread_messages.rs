@@ -1,5 +1,7 @@
 use crate::fingerprinting::signature_format::DecodedSignature;
+#[cfg(feature = "gui")]
 use crate::gui::preferences::Preferences;
+#[cfg(feature = "gui")]
 use crate::utils::csv_song_history::SongHistoryRecord;
 /// This module contains code used from message-based communication between threads.
 
@@ -18,6 +20,7 @@ pub struct SongRecognizedMessage {
     pub shazam_json: String,
 }
 
+#[cfg(feature = "gui")]
 pub enum GUIMessage {
     ErrorMessage(String),
     // A list of audio devices, received from the microphone thread
@@ -30,6 +33,19 @@ pub enum GUIMessage {
     ShowFavorites,
     NetworkStatus(bool), // Is the network reachable?
     WipeSongHistory,
+    MicrophoneRecording,
+    MicrophoneVolumePercent(f32),
+    SongRecognized(Box<SongRecognizedMessage>),
+}
+
+#[cfg(not(feature = "gui"))]
+pub enum GUIMessage {
+    ErrorMessage(String),
+    // A list of audio devices, received from the microphone thread
+    // because CPAL can't be called from the same thread as the GUI
+    // under Windows
+    DevicesList(Box<Vec<String>>),
+    NetworkStatus(bool), // Is the network reachable?
     MicrophoneRecording,
     MicrophoneVolumePercent(f32),
     SongRecognized(Box<SongRecognizedMessage>),

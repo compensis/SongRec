@@ -35,6 +35,7 @@ mod utils {
     pub mod internationalization;
     pub mod mpris_player;
     pub mod thread;
+    #[cfg(feature = "gui")]
     pub mod filesystem_operations;
 }
 

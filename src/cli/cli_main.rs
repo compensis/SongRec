@@ -193,6 +193,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     };
                 }
                 if do_recognize_once {
+                    microphone_tx.send(MicrophoneMessage::MicrophoneRecordStop).unwrap();
                     main_loop_cli.quit();
                     return glib::Continue(false);
                 }
