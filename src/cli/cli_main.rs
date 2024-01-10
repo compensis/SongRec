@@ -13,7 +13,7 @@ use mpris_player::PlaybackStatus;
 use crate::core::http_thread::http_thread;
 use crate::core::microphone_thread::microphone_thread;
 use crate::core::processing_thread::processing_thread;
-use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage};
+use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
 
 use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};
@@ -147,7 +147,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::SongRecognized(message) => {
                 let mut last_track_borrow = last_track.borrow_mut();
                 let track_key = Some(message.track_key.clone());
-                let song_name = format!("{} - {}", message.artist_name, message.song_name);
 
                 if *last_track_borrow != track_key {
                     mpris_player.as_ref().map(|p| update_song(p, &message));
@@ -157,39 +156,12 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             println!("{}", message.shazam_json);
                         }
                         CLIOutputType::CSV => {
-                            csv_writer
-                                .serialize(SongHistoryRecord {
-                                    song_name: song_name,
-                                    album: Some(
-                                        message
-                                            .album_name
-                                            .as_ref()
-                                            .unwrap_or(&"".to_string())
-                                            .to_string(),
-                                    ),
-                                    track_key: Some(message.track_key),
-                                    release_year: Some(
-                                        message
-                                            .release_year
-                                            .as_ref()
-                                            .unwrap_or(&"".to_string())
-                                            .to_string(),
-                                    ),
-                                    genre: Some(
-                                        message
-                                            .genre
-                                            .as_ref()
-                                            .unwrap_or(&"".to_string())
-                                            .to_string(),
-                                    ),
-                                    recognition_date: Local::now().format("%c").to_string(),
-                                })
-                                .unwrap();
+                            csv_writer.serialize(get_song_history_record(message)).unwrap();
                             csv_writer.flush().unwrap();
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
-                            println!("{}", song_name);
+                            println!("{} - {}", message.artist_name, message.song_name);
                         }
                         #[cfg(feature = "slowprint")]
                         CLIOutputType::SongName => {
@@ -213,4 +185,34 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     main_loop.run();
     Ok(())
+}
+
+fn get_song_history_record(message: Box<SongRecognizedMessage>) -> SongHistoryRecord {
+    let _song_name = format!("{} - {}", message.artist_name, message.song_name);
+    SongHistoryRecord {
+        song_name: _song_name,
+        album: Some(
+            message
+                .album_name
+                .as_ref()
+                .unwrap_or(&"".to_string())
+                .to_string(),
+        ),
+        track_key: Some(message.track_key),
+        release_year: Some(
+            message
+                .release_year
+                .as_ref()
+                .unwrap_or(&"".to_string())
+                .to_string(),
+        ),
+        genre: Some(
+            message
+                .genre
+                .as_ref()
+                .unwrap_or(&"".to_string())
+                .to_string(),
+        ),
+        recognition_date: Local::now().format("%c").to_string(),
+    }
 }
