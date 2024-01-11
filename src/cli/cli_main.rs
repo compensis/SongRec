@@ -151,6 +151,16 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if *last_track_borrow != track_key {
                     mpris_player.as_ref().map(|p| update_song(p, &message));
                     *last_track_borrow = track_key;
+
+                    let song_name = &message.song_name;
+                    let artist_name= &message.artist_name;
+    
+                    #[cfg(feature = "textwrap")]
+                    let song_name = &textwrap::fill(&song_name, textwrap::termwidth());
+    
+                    #[cfg(feature = "textwrap")]
+                    let artist_name = &textwrap::fill(&artist_name, textwrap::termwidth());
+
                     match parameters.output_type {
                         CLIOutputType::JSON => {
                             println!("{}", message.shazam_json);
@@ -161,14 +171,14 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
-                            println!("{} - {}", message.artist_name, message.song_name);
+                            println!("{} - {}", artist_name, song_name);
                         }
                         #[cfg(feature = "slowprint")]
                         CLIOutputType::SongName => {
                             clearscreen::clear().unwrap();
                             let delay = std::time::Duration::from_millis(100);
-                            slowprint::slow_println(&message.song_name, delay);
-                            slowprint::slow_println(&message.artist_name, delay);
+                            slowprint::slow_println(song_name, delay);
+                            slowprint::slow_println(artist_name, delay);
                         }
                     };
                 }
