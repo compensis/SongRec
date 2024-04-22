@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 use std::sync::{mpsc, Arc};
+use std::io::stdout;
 
 use chrono::Local;
 use gettextrs::gettext;
@@ -18,6 +19,17 @@ use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMess
 use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};
 use crate::utils::thread::spawn_big_thread;
+
+//use crossterm::cursor::Hide;
+/*
+use crossterm::{
+    cursor::{
+        self, DisableBlinking, EnableBlinking, Hide, MoveDown, MoveLeft, MoveRight, MoveTo, MoveUp,
+        RestorePosition, SavePosition, Show,
+    },
+    execute, Result,
+};
+*/
 
 pub enum CLIOutputType {
     SongName,
@@ -188,7 +200,17 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     return glib::Continue(false);
                 }
             }
-            _ => {}
+            GUIMessage::MicrophoneVolumePercent(percent) => {
+                let log_scaled_value = f32::log10(percent / 100.0 * (100.0 - 1.0) + 1.0) / f32::log10(100.0); 
+
+                let indicators = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+                let i = (log_scaled_value * indicators.len() as f32) as usize; // as usize;
+
+                crossterm::execute!(stdout(), crossterm::cursor::Hide).ok();
+
+                eprint!("\r");
+                eprint!("{}", indicators[i]);
+            }
         }
         glib::Continue(true)
     });
