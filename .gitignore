@@ -25,3 +25,6 @@ stage/
 parts/
 prime/
 *.snap
+
+# The following is related to matrix display 
+matrix-display/matrixdisplay

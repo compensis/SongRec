@@ -52,6 +52,8 @@ use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
 
+use std::process::Command;
+
 macro_rules! base_app {
     () => {
     App::new("SongRec")
@@ -220,6 +222,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set up the translation/internationalization part
 
     setup_internationalization();
+
+    Command::new("matrix-display/matrixdisplay").status().unwrap();
 
     // Collect the program arguments
     let args = app!().get_matches();

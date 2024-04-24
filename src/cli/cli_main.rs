@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 use std::sync::{mpsc, Arc};
+//use std::process::Command;
 
 use chrono::Local;
 use gettextrs::gettext;
@@ -80,6 +81,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     }
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
+
+
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
