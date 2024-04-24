@@ -1,0 +1,3 @@
+[submodule "matrix-display/rpi-rgb-led-matrix"]
+	path = matrix-display/rpi-rgb-led-matrix
+	url = https://github.com/compensis/rpi-rgb-led-matrix.git
