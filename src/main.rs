@@ -215,11 +215,20 @@ macro_rules! app {
     () => { base_app!() };
 }
 
+extern "C" {
+    pub fn MatrixDisplyText() -> u32;
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up the translation/internationalization part
 
     setup_internationalization();
+
+    unsafe {
+        println!("Call c function MatrixDisplyText");
+        println!("{}", MatrixDisplyText());
+    }
 
     // Collect the program arguments
     let args = app!().get_matches();
