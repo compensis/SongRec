@@ -2,7 +2,10 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 use std::sync::{mpsc, Arc};
-//use std::process::Command;
+
+use std::io::Write;
+use std::process::Command;
+use std::process::Stdio;
 
 use chrono::Local;
 use gettextrs::gettext;
@@ -82,7 +85,11 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
-
+    let mut child_process = Command::new("matrix-display/matrixdisplay")
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("Matrix display program not found");
+    let mut matrix_display = child_process.stdin.take().unwrap();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -145,6 +152,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::MicrophoneRecording => {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
+                    matrix_display.write_all(b"Recording started!\n");
                 }
             }
             GUIMessage::SongRecognized(message) => {
