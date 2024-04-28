@@ -52,7 +52,9 @@ use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
 
+use std::io::Write;
 use std::process::Command;
+use std::process::Stdio;
 
 macro_rules! base_app {
     () => {
@@ -222,8 +224,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set up the translation/internationalization part
 
     setup_internationalization();
+    
 
-    Command::new("matrix-display/matrixdisplay").status().unwrap();
+    let mut child_process = Command::new("matrix-display/matrixdisplay")
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("Matrix display program not found");
+
+    {
+        let matrix_display = child_process.stdin.as_mut().unwrap();
+        matrix_display.write_all(b"Hello, world!\n")?;
+        matrix_display.write_all(b"On Display!\n")?;
+  }
+    
+    let _ = child_process.wait();
+    
+    
 
     // Collect the program arguments
     let args = app!().get_matches();
