@@ -23,6 +23,34 @@ use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};
 use crate::utils::thread::spawn_big_thread;
 
+struct MatrixDisplay {
+    //process: Option<std::process::Child>,
+    stdin: Option<std::process::ChildStdin>,
+}
+
+impl MatrixDisplay {
+    pub fn new() -> Self {
+        Self {
+            //process: None,
+            stdin: None,
+        }
+    }
+
+    pub fn init(&mut self) {
+        let mut command = Command::new("matrix-display/matrixdisplay");
+        self.stdin = match command.stdin(Stdio::piped()).spawn() {
+            Ok(child) => child.stdin,
+            Err(_e) => None,
+        };
+    }
+
+    pub fn writeln(&self, line: String) {
+        if let Some(mut stdin) = self.stdin.as_ref() {
+            let line = &textwrap::fill(&line, 9);
+            writeln!(stdin, "{}", line).unwrap();
+        }
+    }
+}
 pub enum CLIOutputType {
     SongName,
     JSON,
@@ -85,11 +113,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
-    let mut child_process = Command::new("matrix-display/matrixdisplay")
-        .stdin(Stdio::piped())
-        .spawn()
-        .expect("Matrix display program not found");
-    let mut matrix_display = child_process.stdin.take().unwrap();
+    let mut matrix_display = MatrixDisplay::new();
+    matrix_display.init();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -152,7 +177,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::MicrophoneRecording => {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
-                    matrix_display.write_all(b"Recording started!\n");
+                    matrix_display.writeln(gettext("Recording started!"));
                 }
             }
             GUIMessage::SongRecognized(message) => {
@@ -183,6 +208,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
                             println!("{} - {}", artist_name, song_name);
+                            matrix_display.writeln(format!("{}\r{}", song_name, artist_name));
                         }
                         #[cfg(feature = "slowprint")]
                         CLIOutputType::SongName => {
