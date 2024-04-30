@@ -56,6 +56,7 @@ default = ["gui"]
 gui = ["gtk", "gdk", "gio", "percent-encoding", "directories", "app_dirs", "gdk-pixbuf"]
 slowprint = ["dep:slowprint", "clearscreen"]
 textwrap = ["dep:textwrap", "terminal_size"]
+matrix-display = ["dep:textwrap", "terminal_size"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gag = "0.1.10" # Crate to silence stderr when CPAL produces uncontrolled AlsaLib output
