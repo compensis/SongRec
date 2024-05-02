@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
   bool with_outline = false;
 
   const char *bdf_font_file = NULL;
-  int x_orig = 0;
+  int x_orig = 1;
   int y_orig = 0;
   int letter_spacing = 0;
 
