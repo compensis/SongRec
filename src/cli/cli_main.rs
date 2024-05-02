@@ -45,6 +45,13 @@ impl MatrixDisplay {
         };
     }
 
+    pub fn clear_screen(&self, ) {
+        if let Some(mut stdin) = self.stdin.as_ref() {
+            // empty line clears screen
+            writeln!(stdin, "").unwrap();
+        }
+    }
+
     pub fn writeln(&self, line: &str) {
         if let Some(mut stdin) = self.stdin.as_ref() {
             let line = &textwrap::fill(&line, Self::CHARS_PER_LINE);
@@ -212,6 +219,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.flush().unwrap();
                         }
                         CLIOutputType::MatrixDisplay => {
+                            matrix_display.clear_screen();
                             matrix_display.writeln(song_name);
                             matrix_display.writeln(artist_name);
                         }
