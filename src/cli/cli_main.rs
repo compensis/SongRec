@@ -44,7 +44,7 @@ impl MatrixDisplay {
         };
     }
 
-    pub fn writeln(&self, line: String) {
+    pub fn writeln(&self, line: &str) {
         if let Some(mut stdin) = self.stdin.as_ref() {
             let line = &textwrap::fill(&line, 9);
             writeln!(stdin, "{}", line).unwrap();
@@ -53,6 +53,7 @@ impl MatrixDisplay {
 }
 pub enum CLIOutputType {
     SongName,
+    MatrixDisplay,
     JSON,
     CSV,
 }
@@ -114,7 +115,9 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
     let mut matrix_display = MatrixDisplay::new();
-    matrix_display.init();
+    if let CLIOutputType::MatrixDisplay = parameters.output_type {
+        matrix_display.init();
+    }
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -177,7 +180,9 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::MicrophoneRecording => {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
-                    matrix_display.writeln(gettext("Recording started!"));
+                    if let CLIOutputType::MatrixDisplay = parameters.output_type {
+                        matrix_display.writeln("Recording started!");
+                    }
                 }
             }
             GUIMessage::SongRecognized(message) => {
@@ -205,10 +210,13 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.serialize(get_song_history_record(message)).unwrap();
                             csv_writer.flush().unwrap();
                         }
+                        CLIOutputType::MatrixDisplay => {
+                            matrix_display.writeln(song_name);
+                            matrix_display.writeln(artist_name);
+                        }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
                             println!("{} - {}", artist_name, song_name);
-                            matrix_display.writeln(format!("{}\r{}", song_name, artist_name));
                         }
                         #[cfg(feature = "slowprint")]
                         CLIOutputType::SongName => {

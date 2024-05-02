@@ -323,6 +323,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 else if enable_csv {
                     CLIOutputType::CSV
                 }
+                else if cfg!(feature = "matrix-display") {
+                    CLIOutputType::MatrixDisplay
+                }
                 else {
                     CLIOutputType::SongName
                 }
@@ -340,12 +343,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                 recognize_once: true,
                 audio_device,
                 input_file,
-
                 output_type: if enable_json {
                     CLIOutputType::JSON
                 }
                 else if enable_csv {
                     CLIOutputType::CSV
+                }
+                else if cfg!(feature = "matrix-display") {
+                    CLIOutputType::MatrixDisplay
                 }
                 else {
                     CLIOutputType::SongName
@@ -392,7 +397,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 recognize_once: false,
                 audio_device: None,
                 input_file: None,
-                output_type: CLIOutputType::SongName
+                output_type: if cfg!(feature = "matrix-display") {
+                    CLIOutputType::MatrixDisplay
+                }
+                else {
+                    CLIOutputType::SongName
+                }
             })?;
         },
         _ => unreachable!()
