@@ -29,9 +29,10 @@ struct MatrixDisplay {
 }
 
 impl MatrixDisplay {
+    const CHARS_PER_LINE: usize = 12;
+
     pub fn new() -> Self {
         Self {
-            //process: None,
             stdin: None,
         }
     }
@@ -46,7 +47,7 @@ impl MatrixDisplay {
 
     pub fn writeln(&self, line: &str) {
         if let Some(mut stdin) = self.stdin.as_ref() {
-            let line = &textwrap::fill(&line, 9);
+            let line = &textwrap::fill(&line, Self::CHARS_PER_LINE);
             writeln!(stdin, "{}", line).unwrap();
         }
     }

@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   int y_orig = 0;
   int letter_spacing = 0;
 
-  bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/7x13.bdf";
+  bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/5x8.bdf";
 
   int opt;
   while ((opt = getopt(argc, argv, "x:y:f:C:B:O:S:F:")) != -1) {
@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
   canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
+    //printf(line);
     const size_t last = strlen(line);
     if (last > 0) line[last - 1] = '\0';  // remove newline.
     bool line_empty = strlen(line) == 0;
