@@ -13,6 +13,9 @@ RGB_LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread
 
 LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread
 
+MAGICK_CXXFLAGS?=$(shell GraphicsMagick++-config --cppflags --cxxflags)
+MAGICK_LDFLAGS?=$(shell GraphicsMagick++-config --ldflags --libs)
+
 HARDWARE_DESC?=adafruit-hat-pwm
 
 CFLAGS=-Wall -Wextra -Wno-unused-parameter -O3 -g
@@ -21,13 +24,13 @@ CXXFLAGS=$(CFLAGS)
 all: $(TARGET)
 
 $(TARGET) : $(BUILD_DIR)/$(OBJECTS) $(RGB_LIBRARY)
-	$(CXX) $< -o $@ $(LDFLAGS)
+	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 $(RGB_LIBRARY): FORCE
 	$(MAKE) -C $(RGB_LIBDIR) HARDWARE_DESC=$(HARDWARE_DESC)
 
 $(BUILD_DIR)/%.o : %.cc $(BUILD_DIR)
-	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) $(MAGICK_CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/%.o : %.c $(BUILD_DIR)
 	$(CC) -I$(RGB_INCDIR) $(CFLAGS) -c -o $@ $<

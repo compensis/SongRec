@@ -30,6 +30,7 @@ struct MatrixDisplay {
 
 impl MatrixDisplay {
     const CHARS_PER_LINE: usize = 12;
+    const DATA_LINK_ESCAPE: char = '\u{10}';
 
     pub fn new() -> Self {
         Self {
@@ -39,9 +40,8 @@ impl MatrixDisplay {
 
     pub fn init(&mut self) {
         let mut command = Command::new("matrix-display/matrixdisplay");
-        self.stdin = match command.stdin(Stdio::piped()).spawn() {
-            Ok(child) => child.stdin,
-            Err(_e) => None,
+        if let Ok(child) = command.stdin(Stdio::piped()).spawn() {
+            self.stdin = child.stdin;
         };
     }
 
@@ -58,7 +58,15 @@ impl MatrixDisplay {
             writeln!(stdin, "{}", line).unwrap();
         }
     }
+
+    pub fn show_image(&self, image: Vec<u8>) {
+        if let Some(mut stdin) = self.stdin.as_ref() {
+            writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
+            stdin.write_all(&image).unwrap();
+        }
+    }
 }
+
 pub enum CLIOutputType {
     SongName,
     MatrixDisplay,
@@ -122,10 +130,14 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
+    /*
     let mut matrix_display = MatrixDisplay::new();
     if let CLIOutputType::MatrixDisplay = parameters.output_type {
         matrix_display.init();
     }
+    */
+    let mut command = Command::new("matrix-display/matrixdisplay");
+    let mut matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -189,7 +201,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     if let CLIOutputType::MatrixDisplay = parameters.output_type {
-                        matrix_display.writeln("Recording started!");
+                        //matrix_display.writeln("Recording started!");
                     }
                 }
             }
@@ -219,9 +231,23 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.flush().unwrap();
                         }
                         CLIOutputType::MatrixDisplay => {
-                            matrix_display.clear_screen();
-                            matrix_display.writeln(song_name);
-                            matrix_display.writeln(artist_name);
+                            if let Some(cover) = message.cover_image {
+                                //matrix_display.show_image(&cover);
+
+                                matrix_display_process.kill().unwrap();
+                                const DATA_LINK_ESCAPE: char = '\u{10}';
+                                matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
+                                let mut child_stdin = matrix_display_process.stdin.take().unwrap();
+                                writeln!(child_stdin, "{},", DATA_LINK_ESCAPE).unwrap();
+                                child_stdin.write_all(&cover).unwrap();
+
+                                println!("{} - {}", artist_name, song_name);
+                            }
+                            else {
+                                //matrix_display.clear_screen();
+                                //matrix_display.writeln(song_name);
+                                //matrix_display.writeln(artist_name);
+                            }
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {

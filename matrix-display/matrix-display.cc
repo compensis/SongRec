@@ -7,6 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <exception>
+#include <Magick++.h>
+#include <magick/image.h>
+
 using namespace rgb_matrix;
 
 static int usage(const char *progname) {
@@ -39,7 +43,52 @@ static bool FullSaturation(const Color &c) {
     && (c.b == 0 || c.b == 255);
 }
 
+// Copy an image to a Canvas. Note, the RGBMatrix is implementing the Canvas
+// interface as well as the FrameCanvas we use in the double-buffering of the
+// animted image.
+void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
+  const int offset_x = 0, offset_y = 0;  // If you want to move the image.
+  // Copy all the pixels to the canvas.
+  for (size_t y = 0; y < image.rows(); ++y) {
+    for (size_t x = 0; x < image.columns(); ++x) {
+      const Magick::Color &c = image.pixelColor(x, y);
+      if (c.alphaQuantum() < 256) {
+        canvas->SetPixel(x + offset_x, y + offset_y,
+                         ScaleQuantumToChar(c.redQuantum()),
+                         ScaleQuantumToChar(c.greenQuantum()),
+                         ScaleQuantumToChar(c.blueQuantum()));
+      }
+    }
+  }
+}
+
+// Read a Image from stdin, cale to the size of the matrix and drow it on canvas
+void receiveScaleAndDrawImage(Canvas *canvas) {
+  int target_width = canvas->width();
+  int target_height = canvas->height();
+  Magick::Image image;
+  printf("Read Image from stdin\n");
+  try {
+    std::string imageSpec = "-"; // Read from stdin
+    //std::string imageSpec = "1.jpg";
+    image.read(imageSpec);
+  } catch (std::exception &e) {
+    if (e.what()) {
+      fprintf(stderr, "%s\n", e.what());
+      printf("%s\n", e.what());
+    }
+    printf("Error\n");
+    return;
+  }
+  printf("Scale Image\n");
+  image.scale(Magick::Geometry(target_width, target_height));
+  printf("Draw Image\n");
+  CopyImageToCanvas(image, canvas);
+}
+
 int main(int argc, char *argv[]) {
+  Magick::InitializeMagick(*argv);
+
   RGBMatrix::Options matrix_options;
   rgb_matrix::RuntimeOptions runtime_opt;
 
@@ -147,9 +196,16 @@ int main(int argc, char *argv[]) {
   }
 
   canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
+  printf("Waiting for DATA_LINK_ESCAPE\n");
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
-    //printf(line);
+    const char DATA_LINK_ESCAPE = 0x10;
+    if (line[0] == DATA_LINK_ESCAPE) {
+      printf("DATA_LINK_ESCAPE receifed\n");
+      receiveScaleAndDrawImage(canvas);
+      while(1);
+      continue;
+    }
     const size_t last = strlen(line);
     if (last > 0) line[last - 1] = '\0';  // remove newline.
     bool line_empty = strlen(line) == 0;
@@ -157,8 +213,9 @@ int main(int argc, char *argv[]) {
       canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
       y = y_orig;
     }
-    if (line_empty)
+    if (line_empty) {
       continue;
+    }
     if (outline_font) {
       // The outline font, we need to write with a negative (-2) text-spacing,
       // as we want to have the same letter pitch as the regular text that
