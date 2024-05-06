@@ -24,8 +24,9 @@ use crate::utils::mpris_player::{get_player, update_song};
 use crate::utils::thread::spawn_big_thread;
 
 struct MatrixDisplay {
-    //process: Option<std::process::Child>,
-    stdin: Option<std::process::ChildStdin>,
+    process: Option<std::process::Child>,
+    command: std::process::Command,
+    //process: std::process::Child,
 }
 
 impl MatrixDisplay {
@@ -34,36 +35,47 @@ impl MatrixDisplay {
 
     pub fn new() -> Self {
         Self {
-            stdin: None,
+            process: None,
+            command: Command::new("matrix-display/matrixdisplay"),
         }
     }
 
     pub fn init(&mut self) {
-        let mut command = Command::new("matrix-display/matrixdisplay");
-        if let Ok(child) = command.stdin(Stdio::piped()).spawn() {
-            self.stdin = child.stdin;
+        if let Ok(child) = self.command.stdin(Stdio::piped()).spawn() {
+            self.process = Some(child);
         };
     }
 
     pub fn clear_screen(&self, ) {
-        if let Some(mut stdin) = self.stdin.as_ref() {
-            // empty line clears screen
+        if let Some(process) = &self.process {
+            let mut stdin = process.stdin.as_ref().unwrap();
             writeln!(stdin, "").unwrap();
         }
     }
 
     pub fn writeln(&self, line: &str) {
-        if let Some(mut stdin) = self.stdin.as_ref() {
+        if let Some(process) = &self.process {
+            let mut stdin = process.stdin.as_ref().unwrap();
             let line = &textwrap::fill(&line, Self::CHARS_PER_LINE);
             writeln!(stdin, "{}", line).unwrap();
         }
     }
 
-    pub fn show_image(&self, image: Vec<u8>) {
-        if let Some(mut stdin) = self.stdin.as_ref() {
-            writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
-            stdin.write_all(&image).unwrap();
+    pub fn show_image(&mut self, image: Vec<u8>) {
+        if let Some(mut process) = self.process.take() {
+            process.kill().unwrap();
         }
+        // Start a new matrix display program process, becaus we need to drop stdin aft the
+        // image is written so we cant reuse it next time
+        let mut process = self.command.stdin(Stdio::piped()).spawn().unwrap();
+        let mut stdin = process.stdin.take().unwrap();
+        writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
+        stdin.write_all(&image).unwrap();
+        // Drop stdin after the image is written, to close stdin,
+        // to show that this was all the data
+        drop(stdin);
+        // Keep process so that the image is still displayed
+        self.process = Some(process);
     }
 }
 
@@ -130,14 +142,15 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
-    /*
     let mut matrix_display = MatrixDisplay::new();
     if let CLIOutputType::MatrixDisplay = parameters.output_type {
         matrix_display.init();
     }
-    */
-    let mut command = Command::new("matrix-display/matrixdisplay");
-    let mut matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
+    
+    //let mut matrix_display = MatrixDisplay::new();
+
+    //let mut command = Command::new("matrix-display/matrixdisplay");
+    //let mut matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -201,7 +214,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     if let CLIOutputType::MatrixDisplay = parameters.output_type {
-                        //matrix_display.writeln("Recording started!");
+                        matrix_display.writeln("Recording started!");
                     }
                 }
             }
@@ -232,21 +245,14 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         }
                         CLIOutputType::MatrixDisplay => {
                             if let Some(cover) = message.cover_image {
-                                //matrix_display.show_image(&cover);
-
-                                matrix_display_process.kill().unwrap();
-                                const DATA_LINK_ESCAPE: char = '\u{10}';
-                                matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
-                                let mut child_stdin = matrix_display_process.stdin.take().unwrap();
-                                writeln!(child_stdin, "{},", DATA_LINK_ESCAPE).unwrap();
-                                child_stdin.write_all(&cover).unwrap();
+                                matrix_display.show_image(cover);
 
                                 println!("{} - {}", artist_name, song_name);
                             }
                             else {
-                                //matrix_display.clear_screen();
-                                //matrix_display.writeln(song_name);
-                                //matrix_display.writeln(artist_name);
+                                matrix_display.clear_screen();
+                                matrix_display.writeln(song_name);
+                                matrix_display.writeln(artist_name);
                             }
                         }
                         #[cfg(not(feature = "slowprint"))]
