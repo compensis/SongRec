@@ -67,10 +67,8 @@ void receiveScaleAndDrawImage(Canvas *canvas) {
   int target_width = canvas->width();
   int target_height = canvas->height();
   Magick::Image image;
-  printf("Read Image from stdin\n");
   try {
     std::string imageSpec = "-"; // Read from stdin
-    //std::string imageSpec = "1.jpg";
     image.read(imageSpec);
   } catch (std::exception &e) {
     if (e.what()) {
@@ -80,9 +78,8 @@ void receiveScaleAndDrawImage(Canvas *canvas) {
     printf("Error\n");
     return;
   }
-  printf("Scale Image\n");
   image.scale(Magick::Geometry(target_width, target_height));
-  printf("Draw Image\n");
+  printf("Matrix Display: Draw Image\n");
   CopyImageToCanvas(image, canvas);
 }
 
@@ -196,12 +193,10 @@ int main(int argc, char *argv[]) {
   }
 
   canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
-  printf("Waiting for DATA_LINK_ESCAPE\n");
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
     const char DATA_LINK_ESCAPE = 0x10;
     if (line[0] == DATA_LINK_ESCAPE) {
-      printf("DATA_LINK_ESCAPE receifed\n");
       receiveScaleAndDrawImage(canvas);
       while(1);
       continue;
