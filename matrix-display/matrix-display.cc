@@ -1,6 +1,7 @@
 #include "led-matrix.h"
 #include "graphics.h"
 
+#include <signal.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,12 @@
 #include <magick/image.h>
 
 using namespace rgb_matrix;
+
+// Make sure we can exit gracefully when Ctrl-C is pressed.
+volatile bool interrupt_received = false;
+static void InterruptHandler(int signo) {
+  interrupt_received = true;
+}
 
 static int usage(const char *progname) {
   fprintf(stderr, "usage: %s [options]\n", progname);
@@ -98,6 +105,9 @@ int main(int argc, char *argv[]) {
                                          &matrix_options, &runtime_opt)) {
     return usage(argv[0]);
   }
+
+  signal(SIGTERM, InterruptHandler);
+  signal(SIGINT, InterruptHandler);
 
   Color color(255, 255, 255);
   Color bg_color(0, 0, 0);
@@ -198,7 +208,7 @@ int main(int argc, char *argv[]) {
     const char DATA_LINK_ESCAPE = 0x10;
     if (line[0] == DATA_LINK_ESCAPE) {
       receiveScaleAndDrawImage(canvas);
-      while(1);
+      while(interrupt_received == false);
       continue;
     }
     const size_t last = strlen(line);
