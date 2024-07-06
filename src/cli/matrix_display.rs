@@ -12,32 +12,14 @@ impl MatrixDisplay {
     const DATA_LINK_ESCAPE: char = '\u{10}';
 
     pub fn new() -> Self {
-        let exe = std::path::Path::new("matrixdisplay");
-        let current_exe = std::env::current_exe().unwrap();
-        let dir = current_exe.parent().unwrap();
-        // exe in same dir
-        let mut program = dir.join(exe);
-        if let Ok(false) = program.try_exists()  {
-            // exe in subdir
-            program = dir.join("matrix-display").join(exe);
-        }
-        if let Ok(false) = program.try_exists()  {
-            // exe relativ to target/release/
-            program = dir.join("../../matrix-display").join(exe);
-        }
-
-        println!("program: {}", program.display());
-
         Self {
             process: None,
-            command: Command::new(program),
+            command: Command::new("matrix-display/matrixdisplay"),
         }
     }
 
     pub fn init(&mut self) {
-        let current_exe = std::env::current_exe().unwrap();
-        let dir = current_exe.parent().unwrap();
-        if let Ok(child) = self.command.current_dir(dir).stdin(Stdio::piped()).spawn() {
+        if let Ok(child) = self.command.stdin(Stdio::piped()).spawn() {
             self.process = Some(child);
         };
     }
@@ -63,9 +45,7 @@ impl MatrixDisplay {
         }
         // Start a new matrix display program process, becaus we need to drop stdin aft the
         // image is written so we cant reuse it next time
-        let current_exe = std::env::current_exe().unwrap();
-        let dir = current_exe.parent().unwrap();
-        let mut process = self.command.current_dir(dir).stdin(Stdio::piped()).spawn().unwrap();
+        let mut process = self.command.stdin(Stdio::piped()).spawn().unwrap();
         let mut stdin = process.stdin.take().unwrap();
         writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
         stdin.write_all(&image).unwrap();
