@@ -32,7 +32,6 @@ static int usage(const char *progname) {
           "\t-S <spacing>      : Spacing pixels between letters (Default: 0)\n"
           "\t-C <r,g,b>        : Color. Default 255,255,0\n"
           "\t-B <r,g,b>        : Font Background-Color. Default 0,0,0\n"
-          "\t-O <r,g,b>        : Outline-Color, e.g. to increase contrast.\n"
           "\t-F <r,g,b>        : Panel flooding-background color. Default 0,0,0\n"
           "\n"
           );
@@ -113,7 +112,6 @@ int main(int argc, char *argv[]) {
   Color bg_color(0, 0, 0);
   Color flood_color(0, 0, 0);
   Color outline_color(0,0,0);
-  bool with_outline = false;
 
   const char *bdf_font_file = NULL;
   int x_orig = 1;
@@ -141,13 +139,6 @@ int main(int argc, char *argv[]) {
         return usage(argv[0]);
       }
       break;
-    case 'O':
-      if (!parseColor(&outline_color, optarg)) {
-        fprintf(stderr, "Invalid outline color spec: %s\n", optarg);
-        return usage(argv[0]);
-      }
-      with_outline = true;
-      break;
     case 'F':
       if (!parseColor(&flood_color, optarg)) {
         fprintf(stderr, "Invalid background color spec: %s\n", optarg);
@@ -171,15 +162,6 @@ int main(int argc, char *argv[]) {
   if (!font.LoadFont(bdf_font_file)) {
     fprintf(stderr, "Couldn't load font '%s'\n", bdf_font_file);
     return 1;
-  }
-
-  /*
-   * If we want an outline around the font, we create a new font with
-   * the original font as a template that is just an outline font.
-   */
-  rgb_matrix::Font *outline_font = NULL;
-  if (with_outline) {
-    outline_font = font.CreateOutlineFont();
   }
 
   RGBMatrix *canvas = RGBMatrix::CreateFromOptions(matrix_options, runtime_opt);
@@ -221,19 +203,11 @@ int main(int argc, char *argv[]) {
     if (line_empty) {
       continue;
     }
-    if (outline_font) {
-      // The outline font, we need to write with a negative (-2) text-spacing,
-      // as we want to have the same letter pitch as the regular text that
-      // we then write on top.
-      rgb_matrix::DrawText(canvas, *outline_font,
-                           x - 1, y + font.baseline(),
-                           outline_color, &bg_color, line, letter_spacing - 2);
-    }
+
     // The regular text. Unless we already have filled the background with
     // the outline font, we also fill the background here.
     rgb_matrix::DrawText(canvas, font, x, y + font.baseline(),
-                         color, outline_font ? NULL : &bg_color, line,
-                         letter_spacing);
+                         color, &bg_color, line, letter_spacing);
     y += font.height();
   }
 
