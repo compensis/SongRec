@@ -90,6 +90,33 @@ void receiveScaleAndDrawImage(Canvas *canvas) {
   CopyImageToCanvas(image, canvas);
 }
 
+void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const char *artist) {
+  const int x = 0;
+  const int y = 0;
+  const int width = canvas->width() - x;
+  const int letter_spacing = 0;
+
+  Color text_color(255, 255, 255);
+  Color *bg_color = nullptr;
+
+  printf("DrawTextWrapped song_name: %s\n", name);
+  const int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, name, letter_spacing);
+  //printf("name_hight %d\n", name_hight);
+
+  printf("DrawTextWrapped artist: %s\n", artist);
+  const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
+  //printf("artist_hight %d\n", artist_hight);
+
+  const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
+  //printf("name_y %d\n", name_y);
+
+  const int artist_y = canvas->height() - artist_hight;
+  //printf("artist_y %d\n", artist_y);
+
+  rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, width, text_color, bg_color, name, letter_spacing);
+  rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, width, text_color, bg_color, artist, letter_spacing);
+}
+
 int main(int argc, char *argv[]) {
   Magick::InitializeMagick(*argv);
 
@@ -222,23 +249,8 @@ int main(int argc, char *argv[]) {
         const char *song_name = line;
         const char *artist = &line[i+1];
 
-        printf("DrawTextWrapped song_name %s\n", song_name);
-        const int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, canvas->width(), color, &bg_color, song_name, letter_spacing);
-        printf("name_hight %d\n", name_hight);
+        drawSongInfoText(canvas, font, song_name, artist);
 
-        printf("DrawTextWrapped artist %s\n", artist);
-        const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, canvas->width(), color, &bg_color, artist, letter_spacing);
-        printf("artist_hight %d\n", artist_hight);
-
-        const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
-        printf("name_y %d\n", name_y);
-
-        const int artist_y = canvas->height() - artist_hight;
-        printf("artist_y %d\n", artist_y);
-
-        rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, canvas->width(), color, &bg_color, song_name, letter_spacing);
-        rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, canvas->width(), color, &bg_color, artist, letter_spacing);
-        //break;
         while(interrupt_received == false);
       }
     }
