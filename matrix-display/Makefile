@@ -38,6 +38,7 @@ $(BUILD_DIR)/%.o : %.c $(BUILD_DIR)
 clean:
 	$(MAKE) -C $(RGB_LIBDIR) clean
 	rm -rf $(BUILD_DIR)
+	rm -f $(TARGET)
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
