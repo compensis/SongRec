@@ -10,6 +10,7 @@ pub struct MatrixDisplay {
 impl MatrixDisplay {
     const CHARS_PER_LINE: usize = 12;
     const DATA_LINK_ESCAPE: char = '\u{10}';
+    const UNIT_SEPARATOR: char = '\u{1F}';
 
     pub fn new() -> Self {
         Self {
@@ -39,7 +40,7 @@ impl MatrixDisplay {
         }
     }
 
-    pub fn show_image(&mut self, image: Vec<u8>) {
+    pub fn show_song(&mut self, song_name: &str, artist: &str, cover_image: Option<Vec<u8>>) {
         if let Some(mut process) = self.process.take() {
             process.kill().unwrap();
         }
@@ -47,8 +48,16 @@ impl MatrixDisplay {
         // image is written so we cant reuse it next time
         let mut process = self.command.stdin(Stdio::piped()).spawn().unwrap();
         let mut stdin = process.stdin.take().unwrap();
-        writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
-        stdin.write_all(&image).unwrap();
+
+        write!(stdin, "{}", song_name).unwrap();
+        write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
+        writeln!(stdin, "{}", artist).unwrap();
+
+        if let Some(image) = cover_image {
+            writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
+            stdin.write_all(&image).unwrap();
+        }
+
         // Drop stdin after the image is written, to close stdin,
         // to show that this was all the data
         drop(stdin);

@@ -87,11 +87,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     if let CLIOutputType::MatrixDisplay = parameters.output_type {
         matrix_display.init();
     }
-    
-    //let mut matrix_display = MatrixDisplay::new();
-
-    //let mut command = Command::new("matrix-display/matrixdisplay");
-    //let mut matrix_display_process = command.stdin(Stdio::piped()).spawn().unwrap();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -155,6 +150,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     if let CLIOutputType::MatrixDisplay = parameters.output_type {
+                        matrix_display.clear_screen();
                         matrix_display.writeln("Recording started!");
                     }
                 }
@@ -185,16 +181,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.flush().unwrap();
                         }
                         CLIOutputType::MatrixDisplay => {
-                            if let Some(cover) = message.cover_image {
-                                matrix_display.show_image(cover);
-
-                                println!("{} - {}", artist_name, song_name);
-                            }
-                            else {
-                                matrix_display.clear_screen();
-                                matrix_display.writeln(song_name);
-                                matrix_display.writeln(artist_name);
-                            }
+                            println!("{} - {}", artist_name, song_name);
+                            matrix_display.show_song(song_name, artist_name, message.cover_image);
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {

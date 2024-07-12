@@ -1,5 +1,6 @@
 #include "led-matrix.h"
 #include "graphics.h"
+#include "typesetting.h"
 
 #include <signal.h>
 #include <getopt.h>
@@ -187,12 +188,17 @@ int main(int argc, char *argv[]) {
   canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
+    bool display_image = false;
+
     const char DATA_LINK_ESCAPE = 0x10;
     if (line[0] == DATA_LINK_ESCAPE) {
-      receiveScaleAndDrawImage(canvas);
-      while(interrupt_received == false);
+      if (display_image) {
+        receiveScaleAndDrawImage(canvas);
+        while(interrupt_received == false);
+      }
       continue;
     }
+
     const size_t last = strlen(line);
     if (last > 0) line[last - 1] = '\0';  // remove newline.
     bool line_empty = strlen(line) == 0;
@@ -204,11 +210,43 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    // The regular text. Unless we already have filled the background with
-    // the outline font, we also fill the background here.
-    rgb_matrix::DrawText(canvas, font, x, y + font.baseline(),
-                         color, &bg_color, line, letter_spacing);
-    y += font.height();
+    bool song_info_received = false;
+    const char UNIT_SEPARATOR = 0x1F;
+    for (size_t i = 0; i < last; i++) {
+      if (line[i] == UNIT_SEPARATOR) {
+        song_info_received = true;
+        if (display_image) {
+          break;
+        }
+        line[i] = '\0';
+        const char *song_name = line;
+        const char *artist = &line[i+1];
+
+        printf("DrawTextWrapped song_name %s\n", song_name);
+        const int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, canvas->width(), color, &bg_color, song_name, letter_spacing);
+        printf("name_hight %d\n", name_hight);
+
+        printf("DrawTextWrapped artist %s\n", artist);
+        const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, canvas->width(), color, &bg_color, artist, letter_spacing);
+        printf("artist_hight %d\n", artist_hight);
+
+        const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
+        printf("name_y %d\n", name_y);
+
+        const int artist_y = canvas->height() - artist_hight;
+        printf("artist_y %d\n", artist_y);
+
+        rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, canvas->width(), color, &bg_color, song_name, letter_spacing);
+        rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, canvas->width(), color, &bg_color, artist, letter_spacing);
+        //break;
+        while(interrupt_received == false);
+      }
+    }
+    if (song_info_received) {
+      continue;
+    }
+
+    y += rgb_matrix::DrawTextWrapped(canvas, font, x, y, canvas->width(), color, &bg_color, line, letter_spacing);
   }
 
   // Finished. Shut down the RGB matrix.
