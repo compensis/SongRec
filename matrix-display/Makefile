@@ -1,6 +1,6 @@
 
 TARGET=matrixdisplay
-OBJECTS=matrix-display.o
+OBJECTS=animation.o matrix-display.o
 
 BUILD_DIR=build
 
@@ -23,8 +23,8 @@ CXXFLAGS=$(CFLAGS)
 
 all: $(TARGET)
 
-$(TARGET) : $(BUILD_DIR)/$(OBJECTS) $(RGB_LIBRARY)
-	$(CXX) $< -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
+$(TARGET) : $(addprefix $(BUILD_DIR)/, $(OBJECTS)) $(RGB_LIBRARY)
+	$(CXX) $^ -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 $(RGB_LIBRARY): FORCE
 	$(MAKE) -C $(RGB_LIBDIR) HARDWARE_DESC=$(HARDWARE_DESC)

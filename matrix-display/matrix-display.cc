@@ -15,6 +15,8 @@
 
 using namespace rgb_matrix;
 
+extern void showAnimation(RGBMatrix *matrix, const char *filename);
+
 // Make sure we can exit gracefully when Ctrl-C is pressed.
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
@@ -54,16 +56,19 @@ static bool FullSaturation(const Color &c) {
 // interface as well as the FrameCanvas we use in the double-buffering of the
 // animted image.
 void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
-  const int offset_x = 0, offset_y = 0;  // If you want to move the image.
+  // Center Image
+  const int offset_x = (canvas->width() - image.columns()) / 2;
+  const int offset_y = (canvas->height() - image.rows()) / 2;
+
   // Copy all the pixels to the canvas.
   for (size_t y = 0; y < image.rows(); ++y) {
     for (size_t x = 0; x < image.columns(); ++x) {
       const Magick::Color &c = image.pixelColor(x, y);
       if (c.alphaQuantum() < 256) {
-        canvas->SetPixel(x + offset_x, y + offset_y,
-                         ScaleQuantumToChar(c.redQuantum()),
-                         ScaleQuantumToChar(c.greenQuantum()),
-                         ScaleQuantumToChar(c.blueQuantum()));
+        auto r = ScaleQuantumToChar(c.redQuantum());
+        auto g = ScaleQuantumToChar(c.greenQuantum());
+        auto b =ScaleQuantumToChar(c.blueQuantum());
+        canvas->SetPixel(x + offset_x, y + offset_y, r, g, b);
       }
     }
   }
@@ -193,6 +198,7 @@ int main(int argc, char *argv[]) {
   int letter_spacing = 0;
 
   bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
+  const char * animation_image_file = "matrix-display/animation16x16.gif";
 
   int opt;
   while ((opt = getopt(argc, argv, "x:y:f:C:B:O:S:F:")) != -1) {
@@ -251,14 +257,16 @@ int main(int argc, char *argv[]) {
 
   const int x = x_orig;
   int y = y_orig;
-
+ 
   if (isatty(STDIN_FILENO)) {
     // Only give a message if we are interactive. If connected via pipe, be quiet
     printf("Enter lines. Full screen or empty line clears screen.\n"
            "Supports UTF-8. CTRL-D for exit.\n");
   }
 
-  canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
+  showAnimation(canvas, animation_image_file);
+
+  canvas->Fill(flood_color.r, flood_color.g, flood_color.b); // ToDo use canvas->Clear(); instead
   DISPLAY_ORIENTATION orientation = DISPLAY_ORIENTATION::UPRIGHT;
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {

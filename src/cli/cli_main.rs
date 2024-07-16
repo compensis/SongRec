@@ -84,9 +84,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
     let mut matrix_display = MatrixDisplay::new();
-    if let CLIOutputType::MatrixDisplay = parameters.output_type {
-        matrix_display.init();
-    }
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -150,8 +147,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     if let CLIOutputType::MatrixDisplay = parameters.output_type {
-                        matrix_display.clear_screen();
-                        matrix_display.writeln("Recording started!");
+                        matrix_display.init();
                     }
                 }
             }
