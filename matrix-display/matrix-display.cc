@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
   int y_orig = 0;
   int letter_spacing = 0;
 
-  bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/5x8.bdf";
+  bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
 
   int opt;
   while ((opt = getopt(argc, argv, "x:y:f:C:B:O:S:F:")) != -1) {
