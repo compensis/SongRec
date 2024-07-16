@@ -69,8 +69,37 @@ void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
   }
 }
 
+enum struct DISPLAY_ORIENTATION {UPRIGHT, RIGHT, UPSIDE_OWN, LEFT};
+
+DISPLAY_ORIENTATION getDisplayOrientation(RGBMatrix *matrix) {
+  const uint64_t GPIO_2  = 0b1 << 2;
+  const uint64_t GPIO_3  = 0b1 << 3;
+  const uint64_t GPIO_14 = 0b1 << 14;
+  const uint64_t BIT_MASK = GPIO_2 | GPIO_3 | GPIO_14;
+
+  matrix->RequestInputs(BIT_MASK);
+  uint64_t inputs = matrix->AwaitInputChange(100); // ToDo dosnt work with 0! Why?
+  printf("Inputs & BIT_MASK: 0x%04lx\n", inputs & BIT_MASK);
+
+  switch (inputs & BIT_MASK)
+  {
+    case GPIO_2:
+      printf("DISPLAY_ORIENTATION::UPSIDE_OWN\n");
+      return DISPLAY_ORIENTATION::UPSIDE_OWN;
+    case GPIO_3:
+      printf("DISPLAY_ORIENTATION::RIGHT\n");
+      return DISPLAY_ORIENTATION::RIGHT;
+    case GPIO_14:
+      printf("DISPLAY_ORIENTATION::LEFT\n");
+      return DISPLAY_ORIENTATION::LEFT;
+    default:
+      printf("DISPLAY_ORIENTATION::UPRIGHT\n");
+      return DISPLAY_ORIENTATION::UPRIGHT;
+  }
+}
+
 // Read a Image from stdin, cale to the size of the matrix and drow it on canvas
-void receiveScaleAndDrawImage(Canvas *canvas) {
+void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
   int target_width = canvas->width();
   int target_height = canvas->height();
   Magick::Image image;
@@ -86,6 +115,23 @@ void receiveScaleAndDrawImage(Canvas *canvas) {
     return;
   }
   image.scale(Magick::Geometry(target_width, target_height));
+
+  switch (orientation)
+  {
+    case DISPLAY_ORIENTATION::LEFT:
+      image.rotate(90);
+      break;
+    case DISPLAY_ORIENTATION::RIGHT:
+      image.rotate(90);
+      break;
+    case DISPLAY_ORIENTATION::UPSIDE_OWN:
+      image.rotate(180);
+      break;
+    case DISPLAY_ORIENTATION::UPRIGHT:
+      // Nothing to do
+      break;
+  }
+
   printf("Matrix Display: Draw Image\n");
   CopyImageToCanvas(image, canvas);
 }
@@ -213,14 +259,13 @@ int main(int argc, char *argv[]) {
   }
 
   canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
+  DISPLAY_ORIENTATION orientation = DISPLAY_ORIENTATION::UPRIGHT;
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
-    bool display_image = false;
-
     const char DATA_LINK_ESCAPE = 0x10;
     if (line[0] == DATA_LINK_ESCAPE) {
-      if (display_image) {
-        receiveScaleAndDrawImage(canvas);
+      if (orientation != DISPLAY_ORIENTATION::UPRIGHT) {
+        receiveScaleAndDrawImage(canvas, orientation);
         while(interrupt_received == false);
       }
       continue;
@@ -242,16 +287,14 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < last; i++) {
       if (line[i] == UNIT_SEPARATOR) {
         song_info_received = true;
-        if (display_image) {
-          break;
+        orientation = getDisplayOrientation(canvas);
+        if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
+          line[i] = '\0';
+          const char *song_name = line;
+          const char *artist = &line[i+1];
+          drawSongInfoText(canvas, font, song_name, artist);
+          while(interrupt_received == false);
         }
-        line[i] = '\0';
-        const char *song_name = line;
-        const char *artist = &line[i+1];
-
-        drawSongInfoText(canvas, font, song_name, artist);
-
-        while(interrupt_received == false);
       }
     }
     if (song_info_received) {
