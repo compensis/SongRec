@@ -23,12 +23,6 @@ static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
-static bool FullSaturation(const Color &c) {
-  return (c.r == 0 || c.r == 255)
-    && (c.g == 0 || c.g == 255)
-    && (c.b == 0 || c.b == 255);
-}
-
 // Copy an image to a Canvas. Note, the RGBMatrix is implementing the Canvas
 // interface as well as the FrameCanvas we use in the double-buffering of the
 // animted image.
@@ -129,17 +123,13 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
 
   printf("DrawTextWrapped song_name: %s\n", name);
   const int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, name, letter_spacing);
-  //printf("name_hight %d\n", name_hight);
 
   printf("DrawTextWrapped artist: %s\n", artist);
   const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
-  //printf("artist_hight %d\n", artist_hight);
 
   const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
-  //printf("name_y %d\n", name_y);
 
   const int artist_y = canvas->height() - artist_hight;
-  //printf("artist_y %d\n", artist_y);
 
   rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, width, text_color, bg_color, name, letter_spacing);
   rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, width, text_color, bg_color, artist, letter_spacing);
@@ -147,8 +137,6 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
 
 int main(int argc, char *argv[]) {
   Magick::InitializeMagick(*argv);
-
-  printf("argv[0] %s\n", argv[0]);
 
   RGBMatrix::Options matrix_options;
   rgb_matrix::RuntimeOptions runtime_opt;
@@ -161,18 +149,8 @@ int main(int argc, char *argv[]) {
   signal(SIGTERM, InterruptHandler);
   signal(SIGINT, InterruptHandler);
 
-  Color color(255, 255, 255);
-  Color bg_color(0, 0, 0);
-  Color flood_color(0, 0, 0);
-  Color outline_color(0,0,0);
-
-  const char *bdf_font_file = NULL;
-  int x_orig = 1;
-  int y_orig = 0;
-  int letter_spacing = 0;
-
-  bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
-  const char * animation_image_file = "matrix-display/animation16x16.gif";
+  const char *bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
+  const char *animation_image_file = "matrix-display/animation16x16.gif";
 
   /*
    * Load font. This needs to be a filename with a bdf bitmap font.
@@ -186,26 +164,14 @@ int main(int argc, char *argv[]) {
   RGBMatrix *canvas = RGBMatrix::CreateFromOptions(matrix_options, runtime_opt);
   if (canvas == NULL)
     return 1;
-
-  const bool all_extreme_colors = (matrix_options.brightness == 100)
-    && FullSaturation(color)
-    && FullSaturation(bg_color)
-    && FullSaturation(outline_color);
-  if (all_extreme_colors)
-    canvas->SetPWMBits(1);
-
-  const int x = x_orig;
-  int y = y_orig;
  
   if (isatty(STDIN_FILENO)) {
     // Only give a message if we are interactive. If connected via pipe, be quiet
-    printf("Enter lines. Full screen or empty line clears screen.\n"
-           "Supports UTF-8. CTRL-D for exit.\n");
+    printf("CTRL-D for exit.\n");
   }
 
   showAnimation(canvas, animation_image_file);
 
-  canvas->Fill(flood_color.r, flood_color.g, flood_color.b); // ToDo use canvas->Clear(); instead
   DISPLAY_ORIENTATION orientation = DISPLAY_ORIENTATION::UPRIGHT;
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
@@ -221,34 +187,26 @@ int main(int argc, char *argv[]) {
     const size_t last = strlen(line);
     if (last > 0) line[last - 1] = '\0';  // remove newline.
     bool line_empty = strlen(line) == 0;
-    if ((y + font.height() > canvas->height()) || line_empty) {
-      canvas->Fill(flood_color.r, flood_color.g, flood_color.b);
-      y = y_orig;
-    }
     if (line_empty) {
+      canvas->Clear();
       continue;
     }
 
-    bool song_info_received = false;
     const char UNIT_SEPARATOR = 0x1F;
     for (size_t i = 0; i < last; i++) {
       if (line[i] == UNIT_SEPARATOR) {
-        song_info_received = true;
         orientation = getDisplayOrientation(canvas);
         if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
+          canvas->Clear();
           line[i] = '\0';
           const char *song_name = line;
           const char *artist = &line[i+1];
           drawSongInfoText(canvas, font, song_name, artist);
           while(interrupt_received == false);
         }
+        break;
       }
     }
-    if (song_info_received) {
-      continue;
-    }
-
-    y += rgb_matrix::DrawTextWrapped(canvas, font, x, y, canvas->width(), color, &bg_color, line, letter_spacing);
   }
 
   // Finished. Shut down the RGB matrix.
