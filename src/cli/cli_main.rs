@@ -35,6 +35,29 @@ pub struct CLIParameters {
     pub output_type: CLIOutputType,
 }
 
+enum TimeoutCounter {
+    Stopped,
+    Started,
+    Countdown(i32),
+}
+
+impl TimeoutCounter {
+    const TIMEOUT: i32 = 5;
+    pub fn is_expired(&mut self) -> bool {
+        let mut expired = false;
+        *self = match *self {
+            TimeoutCounter::Started => TimeoutCounter::Countdown(Self::TIMEOUT - 1),
+            TimeoutCounter::Countdown(t) if t == 0 => {
+                expired = true;
+                TimeoutCounter::Stopped
+            }
+            TimeoutCounter::Countdown(t) => TimeoutCounter::Countdown(t - 1),
+            TimeoutCounter::Stopped  => TimeoutCounter::Stopped,
+        };
+        expired
+    }
+}
+
 pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     glib::MainContext::default().acquire();
     let main_loop = Arc::new(glib::MainLoop::new(None, false));
@@ -84,6 +107,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
     let mut matrix_display = MatrixDisplay::new();
+
+    let mut no_match_timeout_counter = TimeoutCounter::Stopped;
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -135,12 +160,21 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 }
             }
             GUIMessage::ErrorMessage(string) => {
+                let mut last_track_borrow = last_track.borrow_mut();
                 if !(string == gettext("No match for this song") && !input_file_name.is_some()) {
                     eprintln!("{} {}", gettext("Error:"), string);
                 }
                 if input_file_name.is_some() {
                     main_loop_cli.quit();
                     return glib::Continue(false);
+                }
+                if let CLIOutputType::MatrixDisplay = parameters.output_type {
+                    if string == gettext("No match for this song") {
+                        if no_match_timeout_counter.is_expired() {
+                            matrix_display.init();
+                            *last_track_borrow = None;
+                        }
+                    }
                 }
             }
             GUIMessage::MicrophoneRecording => {
@@ -178,6 +212,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         }
                         CLIOutputType::MatrixDisplay => {
                             println!("{} - {}", artist_name, song_name);
+                            no_match_timeout_counter = TimeoutCounter::Started;
                             matrix_display.show_song(&message.song_name, &message.artist_name, message.cover_image);
                         }
                         #[cfg(not(feature = "slowprint"))]

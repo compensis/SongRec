@@ -20,11 +20,15 @@ impl MatrixDisplay {
     }
 
     pub fn init(&mut self) {
+        if let Some(mut process) = self.process.take() {
+            process.kill().unwrap();
+        }
         if let Ok(child) = self.command.stdin(Stdio::piped()).spawn() {
             self.process = Some(child);
         };
     }
 
+    #[allow(dead_code)]
     pub fn clear_screen(&self, ) {
         if let Some(process) = &self.process {
             let mut stdin = process.stdin.as_ref().unwrap();
@@ -32,6 +36,7 @@ impl MatrixDisplay {
         }
     }
 
+    #[allow(dead_code)]
     pub fn writeln(&self, line: &str) {
         if let Some(process) = &self.process {
             let mut stdin = process.stdin.as_ref().unwrap();
