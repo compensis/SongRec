@@ -23,29 +23,6 @@ static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
-static int usage(const char *progname) {
-  fprintf(stderr, "usage: %s [options]\n", progname);
-  fprintf(stderr, "Reads text from stdin and displays it. "
-          "Empty string: clear screen\n");
-  fprintf(stderr, "Options:\n");
-  fprintf(stderr,
-          "\t-f <font-file>    : Use given font.\n"
-          "\t-x <x-origin>     : X-Origin of displaying text (Default: 0)\n"
-          "\t-y <y-origin>     : Y-Origin of displaying text (Default: 0)\n"
-          "\t-S <spacing>      : Spacing pixels between letters (Default: 0)\n"
-          "\t-C <r,g,b>        : Color. Default 255,255,0\n"
-          "\t-B <r,g,b>        : Font Background-Color. Default 0,0,0\n"
-          "\t-F <r,g,b>        : Panel flooding-background color. Default 0,0,0\n"
-          "\n"
-          );
-  rgb_matrix::PrintMatrixFlags(stderr);
-  return 1;
-}
-
-static bool parseColor(Color *c, const char *str) {
-  return sscanf(str, "%hhu,%hhu,%hhu", &c->r, &c->g, &c->b) == 3;
-}
-
 static bool FullSaturation(const Color &c) {
   return (c.r == 0 || c.r == 255)
     && (c.g == 0 || c.g == 255)
@@ -171,6 +148,8 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
 int main(int argc, char *argv[]) {
   Magick::InitializeMagick(*argv);
 
+  printf("argv[0] %s\n", argv[0]);
+
   RGBMatrix::Options matrix_options;
   rgb_matrix::RuntimeOptions runtime_opt;
 
@@ -178,11 +157,6 @@ int main(int argc, char *argv[]) {
   matrix_options.rows = 64;
   matrix_options.cols = 64;
   matrix_options.brightness = 75;
-
-  if (!rgb_matrix::ParseOptionsFromFlags(&argc, &argv,
-                                         &matrix_options, &runtime_opt)) {
-    return usage(argv[0]);
-  }
 
   signal(SIGTERM, InterruptHandler);
   signal(SIGINT, InterruptHandler);
@@ -199,41 +173,6 @@ int main(int argc, char *argv[]) {
 
   bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
   const char * animation_image_file = "matrix-display/animation16x16.gif";
-
-  int opt;
-  while ((opt = getopt(argc, argv, "x:y:f:C:B:O:S:F:")) != -1) {
-    switch (opt) {
-    case 'x': x_orig = atoi(optarg); break;
-    case 'y': y_orig = atoi(optarg); break;
-    case 'f': bdf_font_file = strdup(optarg); break;
-    case 'S': letter_spacing = atoi(optarg); break;
-    case 'C':
-      if (!parseColor(&color, optarg)) {
-        fprintf(stderr, "Invalid color spec: %s\n", optarg);
-        return usage(argv[0]);
-      }
-      break;
-    case 'B':
-      if (!parseColor(&bg_color, optarg)) {
-        fprintf(stderr, "Invalid background color spec: %s\n", optarg);
-        return usage(argv[0]);
-      }
-      break;
-    case 'F':
-      if (!parseColor(&flood_color, optarg)) {
-        fprintf(stderr, "Invalid background color spec: %s\n", optarg);
-        return usage(argv[0]);
-      }
-      break;
-    default:
-      return usage(argv[0]);
-    }
-  }
-
-  if (bdf_font_file == NULL) {
-    fprintf(stderr, "Need to specify BDF font-file with -f\n");
-    return usage(argv[0]);
-  }
 
   /*
    * Load font. This needs to be a filename with a bdf bitmap font.
