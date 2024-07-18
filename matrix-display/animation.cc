@@ -76,5 +76,7 @@ void ShowAnimatedImage(const ImageVector &images, RGBMatrix *matrix) {
 void showAnimation(RGBMatrix *matrix, const char *filename) {
   const ImageVector images = loadAnimationImages(filename);
   matrix->Clear();
-  ShowAnimatedImage(images, matrix);
+  if (images.size() > 0) {
+    ShowAnimatedImage(images, matrix);
+  }
 }
