@@ -1,0 +1,77 @@
+#include <wiringPiI2C.h>
+#include <wiringPi.h>
+#include <stdio.h>
+
+#include <stdexcept>
+
+class MPU6050
+{
+private:
+  static const uint8_t DEFAULT_ADDR = 0x68;
+  // Register
+  static const uint8_t PWR_MGMT_1   = 0x6B; // Power Management 1
+  static const uint8_t SMPLRT_DIV   = 0x19; // Sample Rate Divider
+  static const uint8_t CONFIG       = 0x1A; // Configuration
+  static const uint8_t GYRO_CONFIG  = 0x1B; // Gyroscope Configuration
+  static const uint8_t INT_ENABLE   = 0x38; // Interrupt Enable
+  static const uint8_t ACCEL_XOUT_H = 0x3B;
+  static const uint8_t ACCEL_YOUT_H = 0x3D;
+  static const uint8_t ACCEL_ZOUT_H = 0x3F;
+  static const uint8_t GYRO_XOUT_H  = 0x43;
+  static const uint8_t GYRO_YOUT_H  = 0x45;
+  static const uint8_t GYRO_ZOUT_H  = 0x47;
+  int _fd;
+  short readRawData(int addr);
+public:
+  enum struct ORIENTATION {UPRIGHT, RIGHT, UPSIDE_OWN, LEFT};
+  MPU6050(const uint8_t devide_address = DEFAULT_ADDR);
+  void getAccelRaw(int16_t *x, int16_t *y, int16_t *z);
+  ORIENTATION getOrientation();
+};
+
+MPU6050::MPU6050(const uint8_t devide_address) {
+  _fd = wiringPiI2CSetup(devide_address);
+  wiringPiI2CWriteReg8 (_fd, SMPLRT_DIV, 0x07); // SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) =  1kHz / 8
+  wiringPiI2CWriteReg8 (_fd, PWR_MGMT_1, 0x01); // CLKSEL = 1: Auto selects the best available clock source
+  wiringPiI2CWriteReg8 (_fd, CONFIG, 0);        // Keep reset value = default config
+}
+
+short MPU6050::readRawData(int addr){
+  short high_byte,low_byte,value;
+  high_byte = wiringPiI2CReadReg8(_fd, addr);
+  low_byte = wiringPiI2CReadReg8(_fd, addr+1);
+  value = (high_byte << 8) | low_byte;
+  return value;
+}
+
+void MPU6050::getAccelRaw(int16_t *x, int16_t *y, int16_t *z) {
+  *x = readRawData(ACCEL_XOUT_H);
+  *y = readRawData(ACCEL_YOUT_H);
+  *z = readRawData(ACCEL_ZOUT_H);
+  printf("Acceleration: x=%d y=%d z=%d\n", *x, *y, *z);
+}
+
+MPU6050::ORIENTATION MPU6050::getOrientation() {
+  short x;
+  short y;
+  short z;
+  getAccelRaw(&x, &y, &z);
+
+  if (abs(x) > abs(y)) {
+    if (x > 0) {
+      printf("ORIENTATION::UPRIGHT\n");
+      return ORIENTATION::UPRIGHT;
+    } else {
+      printf("ORIENTATION::UPSIDE_OWN\n");
+      return ORIENTATION::UPSIDE_OWN;
+    }
+  } else {
+    if (y > 0) {
+      printf("ORIENTATION::RIGHT\n");
+      return ORIENTATION::RIGHT;
+    } else {
+      printf("ORIENTATION::LEFT\n");
+      return ORIENTATION::LEFT;
+    }
+  }
+}

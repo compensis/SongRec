@@ -13,6 +13,8 @@
 #include <Magick++.h>
 #include <magick/image.h>
 
+#include "MPU6050.h"
+
 using namespace rgb_matrix;
 
 extern void showAnimation(RGBMatrix *matrix, const char *filename);
@@ -45,33 +47,11 @@ void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
   }
 }
 
-enum struct DISPLAY_ORIENTATION {UPRIGHT, RIGHT, UPSIDE_OWN, LEFT};
+typedef MPU6050::ORIENTATION DISPLAY_ORIENTATION;
 
-DISPLAY_ORIENTATION getDisplayOrientation(RGBMatrix *matrix) {
-  const uint64_t GPIO_2  = 0b1 << 2;
-  const uint64_t GPIO_3  = 0b1 << 3;
-  const uint64_t GPIO_14 = 0b1 << 14;
-  const uint64_t BIT_MASK = GPIO_2 | GPIO_3 | GPIO_14;
-
-  matrix->RequestInputs(BIT_MASK);
-  uint64_t inputs = matrix->AwaitInputChange(100); // ToDo dosnt work with 0! Why?
-  printf("Inputs & BIT_MASK: 0x%04lx\n", inputs & BIT_MASK);
-
-  switch (inputs & BIT_MASK)
-  {
-    case GPIO_2:
-      printf("DISPLAY_ORIENTATION::UPSIDE_OWN\n");
-      return DISPLAY_ORIENTATION::UPSIDE_OWN;
-    case GPIO_3:
-      printf("DISPLAY_ORIENTATION::RIGHT\n");
-      return DISPLAY_ORIENTATION::RIGHT;
-    case GPIO_14:
-      printf("DISPLAY_ORIENTATION::LEFT\n");
-      return DISPLAY_ORIENTATION::LEFT;
-    default:
-      printf("DISPLAY_ORIENTATION::UPRIGHT\n");
-      return DISPLAY_ORIENTATION::UPRIGHT;
-  }
+DISPLAY_ORIENTATION getDisplayOrientation() {
+  MPU6050 gyro;
+  return gyro.getOrientation();
 }
 
 // Read a Image from stdin, cale to the size of the matrix and drow it on canvas
@@ -136,6 +116,7 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
 }
 
 int main(int argc, char *argv[]) {
+  const DISPLAY_ORIENTATION orientation = getDisplayOrientation();
   Magick::InitializeMagick(*argv);
 
   RGBMatrix::Options matrix_options;
@@ -172,9 +153,9 @@ int main(int argc, char *argv[]) {
 
   showAnimation(canvas, animation_image_file);
 
-  DISPLAY_ORIENTATION orientation = DISPLAY_ORIENTATION::UPRIGHT;
   char line[1024];
   while (fgets(line, sizeof(line), stdin)) {
+
     const char DATA_LINK_ESCAPE = 0x10;
     if (line[0] == DATA_LINK_ESCAPE) {
       if (orientation != DISPLAY_ORIENTATION::UPRIGHT) {
@@ -195,7 +176,6 @@ int main(int argc, char *argv[]) {
     const char UNIT_SEPARATOR = 0x1F;
     for (size_t i = 0; i < last; i++) {
       if (line[i] == UNIT_SEPARATOR) {
-        orientation = getDisplayOrientation(canvas);
         if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
           canvas->Clear();
           line[i] = '\0';
