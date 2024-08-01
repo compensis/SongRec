@@ -1,8 +1,8 @@
-#include <wiringPiI2C.h>
-#include <wiringPi.h>
-#include <stdio.h>
+#ifndef MPU6050_H
+#define MPU6050_H
 
-#include <stdexcept>
+#include <stdio.h>
+#include "i2c.h"
 
 class MPU6050
 {
@@ -30,16 +30,16 @@ public:
 };
 
 MPU6050::MPU6050(const uint8_t devide_address) {
-  _fd = wiringPiI2CSetup(devide_address);
-  wiringPiI2CWriteReg8 (_fd, SMPLRT_DIV, 0x07); // SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) =  1kHz / 8
-  wiringPiI2CWriteReg8 (_fd, PWR_MGMT_1, 0x01); // CLKSEL = 1: Auto selects the best available clock source
-  wiringPiI2CWriteReg8 (_fd, CONFIG, 0);        // Keep reset value = default config
+  _fd = i2cSetup(devide_address);
+  i2cWriteReg8 (_fd, SMPLRT_DIV, 0x07); // SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) =  1kHz / 8
+  i2cWriteReg8 (_fd, PWR_MGMT_1, 0x01); // CLKSEL = 1: Auto selects the best available clock source
+  i2cWriteReg8 (_fd, CONFIG, 0);        // Keep reset value = default config
 }
 
 short MPU6050::readRawData(int addr){
   short high_byte,low_byte,value;
-  high_byte = wiringPiI2CReadReg8(_fd, addr);
-  low_byte = wiringPiI2CReadReg8(_fd, addr+1);
+  high_byte = i2cReadReg8(_fd, addr);
+  low_byte = i2cReadReg8(_fd, addr+1);
   value = (high_byte << 8) | low_byte;
   return value;
 }
@@ -75,3 +75,5 @@ MPU6050::ORIENTATION MPU6050::getOrientation() {
     }
   }
 }
+
+#endif // MPU6050_H
