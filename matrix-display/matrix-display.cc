@@ -78,7 +78,7 @@ void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
       image.rotate(90);
       break;
     case DISPLAY_ORIENTATION::RIGHT:
-      image.rotate(90);
+      image.rotate(270);
       break;
     case DISPLAY_ORIENTATION::UPSIDE_OWN:
       image.rotate(180);
