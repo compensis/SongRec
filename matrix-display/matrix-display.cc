@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include <exception>
 #include <Magick++.h>
@@ -23,6 +24,19 @@ extern void showAnimation(RGBMatrix *matrix, const char *filename);
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
   interrupt_received = true;
+}
+
+static inline char * createStr(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int len = vsnprintf(NULL, 0, format, args);
+    char *str = (char *)malloc(len+1);
+    vsnprintf(str, len+1, format, args);
+
+    va_end(args);
+
+    return str;
 }
 
 // Copy an image to a Canvas. Note, the RGBMatrix is implementing the Canvas
@@ -130,8 +144,9 @@ int main(int argc, char *argv[]) {
   signal(SIGTERM, InterruptHandler);
   signal(SIGINT, InterruptHandler);
 
-  const char *bdf_font_file = "matrix-display/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf";
-  const char *animation_image_file = "matrix-display/animation16x16.gif";
+  char * executable_path = dirname(argv[0]);
+  const char *bdf_font_file = createStr("%s/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf", executable_path);
+  const char *animation_image_file = createStr("%s/animation16x16.gif", executable_path);
 
   /*
    * Load font. This needs to be a filename with a bdf bitmap font.
