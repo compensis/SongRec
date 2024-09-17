@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
   matrix_options.cols = 64;
   matrix_options.brightness = 75;
 
+  runtime_opt.gpio_slowdown = 3; // Prevents interferences on the display (noise)
+
   signal(SIGTERM, InterruptHandler);
   signal(SIGINT, InterruptHandler);
 
