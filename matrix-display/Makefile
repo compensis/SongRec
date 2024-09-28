@@ -1,6 +1,6 @@
 
 TARGET=matrixdisplay
-OBJECTS=animation.o matrix-display.o
+OBJECTS=animation.o main.o
 
 BUILD_DIR=build
 
