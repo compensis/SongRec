@@ -23,7 +23,7 @@ private:
   int _fd;
   short readRawData(int addr);
 public:
-  enum struct ORIENTATION {UPRIGHT, RIGHT, UPSIDE_OWN, LEFT};
+  enum struct ORIENTATION {X_TOP, X_DOWN, Y_TOP, Y_DOWN, Z_TOP, Z_DOWN};
   MPU6050(const uint8_t devide_address = DEFAULT_ADDR);
   void getAccelRaw(int16_t *x, int16_t *y, int16_t *z);
   ORIENTATION getOrientation();
@@ -57,21 +57,35 @@ MPU6050::ORIENTATION MPU6050::getOrientation() {
   short z;
   getAccelRaw(&x, &y, &z);
 
-  if (abs(x) > abs(y)) {
-    if (x > 0) {
-      printf("ORIENTATION::UPRIGHT\n");
-      return ORIENTATION::UPRIGHT;
+  short x_abs = abs(x);
+  short y_abs = abs(y);
+  short z_abs = abs(z);
+
+  if (z_abs > x_abs and z_abs > y_abs) {
+    if (z > 0) {
+      printf("ORIENTATION::Z_TOP\n");
+      return ORIENTATION::Z_TOP;
     } else {
-      printf("ORIENTATION::UPSIDE_OWN\n");
-      return ORIENTATION::UPSIDE_OWN;
+      printf("ORIENTATION::Z_DOWN\n");
+      return ORIENTATION::Z_DOWN;
+    }
+  }
+
+  if (x_abs > y_abs) {
+    if (x > 0) {
+      printf("ORIENTATION::X_TOP\n");
+      return ORIENTATION::X_TOP;
+    } else {
+      printf("ORIENTATION::X_DOWN\n");
+      return ORIENTATION::X_DOWN;
     }
   } else {
     if (y > 0) {
-      printf("ORIENTATION::RIGHT\n");
-      return ORIENTATION::RIGHT;
+      printf("ORIENTATION::Y_TOP\n");
+      return ORIENTATION::Y_TOP;
     } else {
-      printf("ORIENTATION::LEFT\n");
-      return ORIENTATION::LEFT;
+      printf("ORIENTATION::Y_DOWN\n");
+      return ORIENTATION::Y_DOWN;
     }
   }
 }

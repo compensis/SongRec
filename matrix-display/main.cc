@@ -61,11 +61,19 @@ void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
   }
 }
 
-typedef MPU6050::ORIENTATION DISPLAY_ORIENTATION;
+enum struct DISPLAY_ORIENTATION {UPRIGHT, RIGHT, UPSIDE_DOWN, LEFT};
 
 DISPLAY_ORIENTATION getDisplayOrientation() {
   MPU6050 gyro;
-  return gyro.getOrientation();
+  MPU6050::ORIENTATION orientation = gyro.getOrientation();
+
+  switch (orientation) {
+    case MPU6050::ORIENTATION::Y_TOP:  return DISPLAY_ORIENTATION::UPRIGHT;
+    case MPU6050::ORIENTATION::Z_TOP:  return DISPLAY_ORIENTATION::RIGHT;
+    case MPU6050::ORIENTATION::Y_DOWN: return DISPLAY_ORIENTATION::UPSIDE_DOWN;
+    case MPU6050::ORIENTATION::Z_DOWN: return DISPLAY_ORIENTATION::LEFT;
+    default: return DISPLAY_ORIENTATION::UPRIGHT;
+  }
 }
 
 // Read a Image from stdin, cale to the size of the matrix and drow it on canvas
@@ -94,7 +102,7 @@ void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
     case DISPLAY_ORIENTATION::RIGHT:
       image.rotate(270);
       break;
-    case DISPLAY_ORIENTATION::UPSIDE_OWN:
+    case DISPLAY_ORIENTATION::UPSIDE_DOWN:
       image.rotate(180);
       break;
     case DISPLAY_ORIENTATION::UPRIGHT:
