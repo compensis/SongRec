@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
   matrix_options.rows = 64;
   matrix_options.cols = 64;
   matrix_options.brightness = 75;
+  matrix_options.pixel_mapper_config = "Rotate:180";
 
   runtime_opt.gpio_slowdown = 3; // Prevents interferences on the display (noise)
 
