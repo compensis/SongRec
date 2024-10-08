@@ -15,3 +15,6 @@ clean:
 
 run: all
 	sudo ./target/release/songrec
+
+restart:
+	sudo systemctl restart songrec.service
