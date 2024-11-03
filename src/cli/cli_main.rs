@@ -11,7 +11,7 @@ use glib::clone;
 use mpris_player::PlaybackStatus;
 
 use crate::core::http_thread::http_thread;
-use crate::core::microphone_thread::microphone_thread;
+use crate::core::microphone_thread::{self, microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
 use crate::cli::matrix_display::{MatrixDisplay};
@@ -35,24 +35,38 @@ pub struct CLIParameters {
     pub output_type: CLIOutputType,
 }
 
-enum TimeoutCounter {
+enum TimeoutCounterState {
     Stopped,
-    Started,
     Countdown(i32),
 }
 
+struct TimeoutCounter {
+    timeout: i32,
+    state: TimeoutCounterState,
+}
+
 impl TimeoutCounter {
-    const TIMEOUT: i32 = 5;
-    pub fn is_expired(&mut self) -> bool {
+
+    fn new(timeout: i32) -> Self {
+        Self {
+            timeout: timeout,
+            state: TimeoutCounterState::Stopped,
+        }
+    }
+
+    fn start(self: &mut Self) {
+        self.state = TimeoutCounterState::Countdown(self.timeout)
+    }
+
+    fn is_expired(self: &mut Self) -> bool {
         let mut expired = false;
-        *self = match *self {
-            TimeoutCounter::Started => TimeoutCounter::Countdown(Self::TIMEOUT - 1),
-            TimeoutCounter::Countdown(t) if t == 0 => {
+        self.state = match self.state {
+            TimeoutCounterState::Countdown(t) if t == 0 => {
                 expired = true;
-                TimeoutCounter::Stopped
+                TimeoutCounterState::Stopped
             }
-            TimeoutCounter::Countdown(t) => TimeoutCounter::Countdown(t - 1),
-            TimeoutCounter::Stopped  => TimeoutCounter::Stopped,
+            TimeoutCounterState::Countdown(t) => TimeoutCounterState::Countdown(t - 1),
+            TimeoutCounterState::Stopped  => TimeoutCounterState::Stopped,
         };
         expired
     }
@@ -108,7 +122,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut matrix_display = MatrixDisplay::new();
 
-    let mut no_match_timeout_counter = TimeoutCounter::Stopped;
+    let mut no_match_timeout_counter = TimeoutCounter::new(5);
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -212,7 +226,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         }
                         CLIOutputType::MatrixDisplay => {
                             println!("{} - {}", artist_name, song_name);
-                            no_match_timeout_counter = TimeoutCounter::Started;
+                            no_match_timeout_counter.start();
                             matrix_display.show_song(&message.song_name, &message.artist_name, message.cover_image);
                         }
                         #[cfg(not(feature = "slowprint"))]
