@@ -54,8 +54,13 @@ impl TimeoutCounter {
         }
     }
 
-    fn start(self: &mut Self) {
-        self.state = TimeoutCounterState::Countdown(self.timeout)
+    fn start(self: &mut Self) -> bool {
+        let restarted = match self.state {
+            TimeoutCounterState::Stopped  => true,
+            _ => false,
+        };
+        self.state = TimeoutCounterState::Countdown(self.timeout);
+        restarted
     }
 
     fn is_expired(self: &mut Self) -> bool {
@@ -70,6 +75,15 @@ impl TimeoutCounter {
         };
         expired
     }
+
+    /*
+    fn is_stopped(self: &Self) -> bool {
+        match self.state {
+            TimeoutCounterState::Stopped  => true,
+            _ => true,
+        }
+    }
+    */
 }
 
 pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
@@ -123,6 +137,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     let mut matrix_display = MatrixDisplay::new();
 
     let mut no_match_timeout_counter = TimeoutCounter::new(5);
+    let mut microphone_timeout_counter = TimeoutCounter::new(1000);
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -248,7 +263,22 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     return glib::Continue(false);
                 }
             }
-            _ => {}
+            GUIMessage::MicrophoneVolumePercent(percent) => {
+                if percent > 1.0 {
+                    //eprint!("_");
+                    if microphone_timeout_counter.start() {
+                        eprintln!("Display on!");
+                        matrix_display.init();
+                    }
+                } else {
+                    //eprint!(".");
+                    if microphone_timeout_counter.is_expired() {
+                        eprintln!("Display off!");
+                        matrix_display.off();
+                    }
+                }
+                //eprintln!("percent: {}", percent);
+            }
         }
         glib::Continue(true)
     });

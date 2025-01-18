@@ -71,4 +71,10 @@ impl MatrixDisplay {
         // Keep process so that the image is still displayed
         self.process = Some(process);
     }
+
+    pub fn off(&mut self) {
+        if let Some(mut process) = self.process.take() {
+            process.kill().unwrap();
+        }
+    }
 }
