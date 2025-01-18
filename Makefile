@@ -18,3 +18,6 @@ run: all
 
 restart:
 	sudo systemctl restart songrec.service
+
+stop:
+	sudo systemctl stop songrec.service
