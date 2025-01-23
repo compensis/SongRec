@@ -11,7 +11,7 @@ use glib::clone;
 use mpris_player::PlaybackStatus;
 
 use crate::core::http_thread::http_thread;
-use crate::core::microphone_thread::{self, microphone_thread};
+use crate::core::microphone_thread::{microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
 use crate::cli::matrix_display::{MatrixDisplay};
