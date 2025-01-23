@@ -208,7 +208,10 @@ int main(int argc, char *argv[]) {
           const char *song_name = line;
           const char *artist = &line[i+1];
           drawSongInfoText(canvas, font, song_name, artist);
-          while(interrupt_received == false);
+          while(interrupt_received == false) {
+            // Read image data from stdin even if we do not use it to prevent hanging
+            (void) fgetc(stdin); // ignore returned, read character 
+          }
         }
         break;
       }
