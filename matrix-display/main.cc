@@ -129,9 +129,11 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
   printf("DrawTextWrapped artist: %s\n", artist);
   const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
 
-  const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
-
+  // Place the artist name at the bottom of the display
   const int artist_y = canvas->height() - artist_hight;
+
+  // Place the song name in the center of the area above the artist name
+  const int name_y = (canvas->height() - name_hight - artist_hight) / 2;
 
   rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, width, text_color, bg_color, name, letter_spacing);
   rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, width, text_color, bg_color, artist, letter_spacing);
