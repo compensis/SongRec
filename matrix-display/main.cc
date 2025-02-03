@@ -114,7 +114,32 @@ void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
   CopyImageToCanvas(image, canvas);
 }
 
-void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const char *artist) {
+// Shorten the input string by replacing part of it with an ellipsis ("…").
+void shortenStr(char *str) {
+  const char * ellipsis = "…";
+
+  // If the string is shorter than the ellipsis itself, there is nothing we can do
+  if (strlen(str) < strlen(ellipsis)) {
+    return;
+  }
+
+  // Loop through the string from the position where the ellipsis would fit
+  // towards the beginning, searching for the last space (' ') character.
+  for (int i = strlen(str) - strlen(ellipsis); i >= 0; i--) {
+    // If a space is found, replace it with the ellipsis
+    if (str[i] == ' ') {
+      strcpy(&str[i], ellipsis);
+      return;
+    }
+  }
+
+  // If no space was found in the previous loop, just truncate the string
+  // to the position where the ellipsis should go and append the ellipsis.
+  int i = strlen(str) - strlen(ellipsis);
+  strcpy(&str[i], ellipsis);
+}
+
+void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist) {
   const int x = 0;
   const int y = 0;
   const int width = canvas->width() - x;
@@ -124,10 +149,21 @@ void drawSongInfoText(Canvas *canvas, const Font &font, const char *name, const 
   Color *bg_color = nullptr;
 
   printf("DrawTextWrapped song_name: %s\n", name);
-  const int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, name, letter_spacing);
+  int name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, name, letter_spacing);
 
   printf("DrawTextWrapped artist: %s\n", artist);
-  const int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
+  int artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
+
+  // Shorten song name or artist if both don’t fit on the matrix display
+  while (name_hight + artist_hight > canvas->height()) {
+    if (name_hight > artist_hight) {
+      shortenStr(name);
+      name_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, name, letter_spacing);
+    } else {
+      shortenStr(artist);
+      artist_hight = rgb_matrix::DrawTextWrapped(nullptr, font, x, y, width, text_color, bg_color, artist, letter_spacing);
+    }
+  }
 
   // Place the artist name at the bottom of the display
   const int artist_y = canvas->height() - artist_hight;
@@ -207,8 +243,8 @@ int main(int argc, char *argv[]) {
         if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
           canvas->Clear();
           line[i] = '\0';
-          const char *song_name = line;
-          const char *artist = &line[i+1];
+          char *song_name = line;
+          char *artist = &line[i+1];
           drawSongInfoText(canvas, font, song_name, artist);
           while(interrupt_received == false) {
             // Read image data from stdin even if we do not use it to prevent hanging
