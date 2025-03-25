@@ -238,20 +238,19 @@ int main(int argc, char *argv[]) {
     }
 
     const char UNIT_SEPARATOR = 0x1F;
-    for (size_t i = 0; i < last; i++) {
-      if (line[i] == UNIT_SEPARATOR) {
-        if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
-          canvas->Clear();
-          line[i] = '\0';
-          char *song_name = line;
-          char *artist = &line[i+1];
-          drawSongInfoText(canvas, font, song_name, artist);
-          while(interrupt_received == false) {
-            // Read image data from stdin even if we do not use it to prevent hanging
-            (void) fgetc(stdin); // ignore returned, read character 
-          }
-        }
-        break;
+    if (orientation == DISPLAY_ORIENTATION::UPRIGHT) {
+      canvas->Clear();
+      const char delimiters[] = {UNIT_SEPARATOR, '\0'};
+      // Split line at delimiter
+      char *line_remaining = line;
+      char *song_name = strsep(&line_remaining, delimiters);
+      char *artist = line_remaining;
+      if (song_name != NULL && artist != NULL) {
+        drawSongInfoText(canvas, font, song_name, artist);
+      }
+      while(interrupt_received == false) {
+        // Read image data from stdin even if we do not use it to prevent hanging
+        (void) fgetc(stdin); // ignore returned, read character 
       }
     }
   }
