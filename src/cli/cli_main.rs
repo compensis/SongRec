@@ -227,7 +227,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         CLIOutputType::MatrixDisplay => {
                             println!("{} - {}", artist_name, song_name);
                             no_match_timeout_counter.start();
-                            matrix_display.show_song(&message.song_name, &message.artist_name, message.cover_image);
+                            matrix_display.show_song(&message.song_name, &message.artist_name, message.release_year, message.cover_image);
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {

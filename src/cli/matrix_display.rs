@@ -45,7 +45,7 @@ impl MatrixDisplay {
         }
     }
 
-    pub fn show_song(&mut self, song_name: &str, artist: &str, cover_image: Option<Vec<u8>>) {
+    pub fn show_song(&mut self, song_name: &str, artist: &str, release_year: Option<String>, cover_image: Option<Vec<u8>>) {
         if let Some(mut process) = self.process.take() {
             process.kill().unwrap();
         }
@@ -56,7 +56,12 @@ impl MatrixDisplay {
 
         write!(stdin, "{}", song_name).unwrap();
         write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
-        writeln!(stdin, "{}", artist).unwrap();
+        write!(stdin, "{}", artist).unwrap();
+        write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
+        if let Some(year) = release_year {
+            write!(stdin, "{}", year).unwrap();
+        }
+        writeln!(stdin, "").unwrap();
 
         if let Some(image) = cover_image {
             writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
