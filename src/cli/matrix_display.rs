@@ -57,8 +57,8 @@ impl MatrixDisplay {
         write!(stdin, "{}", song_name).unwrap();
         write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
         write!(stdin, "{}", artist).unwrap();
-        write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
         if let Some(year) = release_year {
+            write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
             write!(stdin, "{}", year).unwrap();
         }
         writeln!(stdin, "").unwrap();
