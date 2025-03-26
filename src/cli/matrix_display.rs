@@ -54,17 +54,14 @@ impl MatrixDisplay {
         let mut process = self.command.stdin(Stdio::piped()).spawn().unwrap();
         let mut stdin = process.stdin.take().unwrap();
 
-        write!(stdin, "{}", song_name).unwrap();
-        write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
-        write!(stdin, "{}", artist).unwrap();
+        write!(stdin, "{}{}{}", song_name, Self::UNIT_SEPARATOR, artist).unwrap();
         if let Some(year) = release_year {
-            write!(stdin, "{}", Self::UNIT_SEPARATOR).unwrap();
-            write!(stdin, "{}", year).unwrap();
+            write!(stdin, "{}{}", Self::UNIT_SEPARATOR, year).unwrap();
         }
-        writeln!(stdin, "").unwrap();
+        writeln!(stdin).unwrap();
 
         if let Some(image) = cover_image {
-            writeln!(stdin, "{},", Self::DATA_LINK_ESCAPE).unwrap();
+            writeln!(stdin, "{}", Self::DATA_LINK_ESCAPE).unwrap();
             stdin.write_all(&image).unwrap();
         }
 
