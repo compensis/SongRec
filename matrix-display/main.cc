@@ -139,7 +139,26 @@ void shortenStr(char *str) {
   strcpy(&str[i], ellipsis);
 }
 
-void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist) {
+void drawYear(Canvas *canvas, const Font &font, const Color &text_color, const Color *background_color, char *year, int letter_spacing) {
+  int x = 0;
+  int y = 0;
+
+  // The year in double digits only
+  if (strlen(year) > 2) { 
+    year = &year[strlen(year) - 2];
+  }
+
+  // First draw outsice canvas to get width
+  x = canvas->width();
+  int width = rgb_matrix::DrawText(canvas, font, x, y, text_color, background_color, year, letter_spacing);
+
+  // Place the year in the upper right corner.
+  x = canvas->width() - width + 1;
+  y = font.height() - 1;
+  rgb_matrix::DrawText(canvas, font, x, y, text_color, background_color, year, letter_spacing);
+}
+
+void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist,  char *year)  {
   const int x = 0;
   const int y = 0;
   const int width = canvas->width() - x;
@@ -173,6 +192,15 @@ void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist
 
   rgb_matrix::DrawTextWrapped(canvas, font, x, name_y, width, text_color, bg_color, name, letter_spacing);
   rgb_matrix::DrawTextWrapped(canvas, font, x, artist_y, width, text_color, bg_color, artist, letter_spacing);
+
+  printf("DrawTextWrapped year: %s\n", year);
+  if (year == NULL) {
+    return;
+  }
+
+  if (name_y >= font.height()) {
+    drawYear(canvas, font, text_color, bg_color, year, letter_spacing);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -244,9 +272,10 @@ int main(int argc, char *argv[]) {
       // Split line at delimiter
       char *line_remaining = line;
       char *song_name = strsep(&line_remaining, delimiters);
-      char *artist = line_remaining;
+      char *artist = strsep(&line_remaining, delimiters);
+      char *release_year = line_remaining;
       if (song_name != NULL && artist != NULL) {
-        drawSongInfoText(canvas, font, song_name, artist);
+        drawSongInfoText(canvas, font, song_name, artist, release_year);
       }
       while(interrupt_received == false) {
         // Read image data from stdin even if we do not use it to prevent hanging
