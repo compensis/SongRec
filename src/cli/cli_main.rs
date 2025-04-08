@@ -14,7 +14,7 @@ use crate::core::http_thread::http_thread;
 use crate::core::microphone_thread::{microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
-use crate::cli::matrix_display::{MatrixDisplay};
+use crate::cli::display_controller::{DisplayController, NoMatchResult};
 
 use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};
@@ -33,57 +33,6 @@ pub struct CLIParameters {
     pub audio_device: Option<String>,
     pub input_file: Option<String>,
     pub output_type: CLIOutputType,
-}
-
-enum TimeoutCounterState {
-    Stopped,
-    Countdown(i32),
-}
-
-struct TimeoutCounter {
-    timeout: i32,
-    state: TimeoutCounterState,
-}
-
-impl TimeoutCounter {
-
-    fn new(timeout: i32) -> Self {
-        Self {
-            timeout: timeout,
-            state: TimeoutCounterState::Stopped,
-        }
-    }
-
-    fn start(self: &mut Self) -> bool {
-        let restarted = match self.state {
-            TimeoutCounterState::Stopped  => true,
-            _ => false,
-        };
-        self.state = TimeoutCounterState::Countdown(self.timeout);
-        restarted
-    }
-
-    fn is_expired(self: &mut Self) -> bool {
-        let mut expired = false;
-        self.state = match self.state {
-            TimeoutCounterState::Countdown(t) if t == 0 => {
-                expired = true;
-                TimeoutCounterState::Stopped
-            }
-            TimeoutCounterState::Countdown(t) => TimeoutCounterState::Countdown(t - 1),
-            TimeoutCounterState::Stopped  => TimeoutCounterState::Stopped,
-        };
-        expired
-    }
-
-    /*
-    fn is_stopped(self: &Self) -> bool {
-        match self.state {
-            TimeoutCounterState::Stopped  => true,
-            _ => true,
-        }
-    }
-    */
 }
 
 pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
@@ -134,10 +83,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
-    let mut matrix_display = MatrixDisplay::new();
-
-    let mut no_match_timeout_counter = TimeoutCounter::new(5);
-    let mut microphone_timeout_counter = TimeoutCounter::new(1000);
+    let mut display_controller = DisplayController::new();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -199,8 +145,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 }
                 if let CLIOutputType::MatrixDisplay = parameters.output_type {
                     if string == gettext("No match for this song") {
-                        if no_match_timeout_counter.is_expired() {
-                            matrix_display.init();
+                        if let NoMatchResult::Reset = display_controller.handle_no_match() {
                             *last_track_borrow = None;
                         }
                     }
@@ -210,7 +155,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     if let CLIOutputType::MatrixDisplay = parameters.output_type {
-                        matrix_display.init();
+                        display_controller.handle_recording_started();
                     }
                 }
             }
@@ -223,11 +168,11 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     *last_track_borrow = track_key;
 
                     let song_name = &message.song_name;
-                    let artist_name= &message.artist_name;
-    
+                    let artist_name = &message.artist_name;
+
                     #[cfg(feature = "textwrap")]
                     let song_name = &textwrap::fill(&song_name, textwrap::termwidth());
-    
+
                     #[cfg(feature = "textwrap")]
                     let artist_name = &textwrap::fill(&artist_name, textwrap::termwidth());
 
@@ -241,8 +186,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                         }
                         CLIOutputType::MatrixDisplay => {
                             println!("{} - {}", artist_name, song_name);
-                            no_match_timeout_counter.start();
-                            matrix_display.show_song(&message.song_name, &message.artist_name, message.release_year, message.cover_image);
+                            display_controller.handle_song_recognized(message);
                         }
                         #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
@@ -265,19 +209,10 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             }
             GUIMessage::MicrophoneVolumePercent(percent) => {
                 if percent > 1.0 {
-                    //eprint!("_");
-                    if microphone_timeout_counter.start() {
-                        eprintln!("Display on!");
-                        matrix_display.init();
-                    }
+                    display_controller.handle_microphone_volume_high();
                 } else {
-                    //eprint!(".");
-                    if microphone_timeout_counter.is_expired() {
-                        eprintln!("Display off!");
-                        matrix_display.off();
-                    }
+                    display_controller.handle_microphone_volume_low();
                 }
-                //eprintln!("percent: {}", percent);
             }
         }
         glib::Continue(true)

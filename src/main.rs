@@ -26,6 +26,7 @@ mod gui {
 mod cli {
     pub mod cli_main;
     mod matrix_display;
+    mod display_controller;
 }
 
 mod utils {
