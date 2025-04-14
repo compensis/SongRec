@@ -45,7 +45,7 @@ impl MatrixDisplay {
         }
     }
 
-    pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: Option<String>, cover_image: Option<Vec<u8>>) {
+    pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
         if let Some(mut process) = self.process.take() {
             process.kill().unwrap();
         }

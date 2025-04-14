@@ -80,8 +80,8 @@ impl DisplayController {
         self.matrix_display.show_song(
             &message.song_name,
             &message.artist_name,
-            message.release_year,
-            message.cover_image,
+            &message.release_year,
+            &message.cover_image,
         );
         self.no_match_timeout_counter.start();
     }
