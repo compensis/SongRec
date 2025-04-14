@@ -19,7 +19,7 @@ impl TimeoutCounter {
         }
     }
 
-    fn start(&mut self) -> bool {
+    fn start(self: &mut Self) -> bool {
         let restarted = match self.state {
             TimeoutCounterState::Stopped  => true,
             _ => false,
@@ -28,7 +28,7 @@ impl TimeoutCounter {
         restarted
     }
 
-    fn is_expired(&mut self) -> bool {
+    fn is_expired(self: &mut Self) -> bool {
         let mut expired = false;
         self.state = match self.state {
             TimeoutCounterState::Countdown(t) if t == 0 => {
@@ -64,7 +64,7 @@ impl DisplayController {
     }
 
     /// Handles the "no match" scenario and returns a `NoMatchResult`.
-    pub fn handle_no_match(&mut self) -> NoMatchResult {
+    pub fn handle_no_match(self: &mut Self) -> NoMatchResult {
         if self.no_match_timeout_counter.is_expired() {
             self.matrix_display.init();
             return NoMatchResult::Reset;
@@ -72,11 +72,11 @@ impl DisplayController {
         NoMatchResult::NoAction
     }
 
-    pub fn handle_recording_started(&mut self) {
+    pub fn handle_recording_started(self: &mut Self) {
         self.matrix_display.init();
     }
 
-    pub fn handle_song_recognized(&mut self, message: Box<SongRecognizedMessage>) {
+    pub fn handle_song_recognized(self: &mut Self, message: Box<SongRecognizedMessage>) {
         self.matrix_display.show_song(
             &message.song_name,
             &message.artist_name,
@@ -86,14 +86,14 @@ impl DisplayController {
         self.no_match_timeout_counter.start();
     }
 
-    pub fn handle_microphone_volume_high(&mut self) {
+    pub fn handle_microphone_volume_high(self: &mut Self) {
         if self.microphone_timeout_counter.start() {
             eprintln!("Display on!");
             self.matrix_display.init();
         }
     }
 
-    pub fn handle_microphone_volume_low(&mut self) {
+    pub fn handle_microphone_volume_low(self: &mut Self) {
         if self.microphone_timeout_counter.is_expired() {
             eprintln!("Display off!");
             self.matrix_display.off();
