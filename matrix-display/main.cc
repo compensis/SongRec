@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, InterruptHandler);
 
   char * executable_path = dirname(argv[0]);
-  const char *bdf_font_file = createStr("%s/rpi-rgb-led-matrix/fonts/Grand9K Pixel.bdf", executable_path);
+  const char *bdf_font_file = createStr("%s/rpi-rgb-led-matrix/fonts/Grand9K-Pixel.bdf", executable_path);
   const char *animation_image_file = createStr("%s/animation16x16.gif", executable_path);
 
   /*
