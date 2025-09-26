@@ -29,19 +29,18 @@ $(TARGET) : $(addprefix $(BUILD_DIR)/, $(OBJECTS)) $(RGB_LIBRARY)
 $(RGB_LIBRARY): FORCE
 	$(MAKE) -C $(RGB_LIBDIR) HARDWARE_DESC=$(HARDWARE_DESC)
 
-$(BUILD_DIR)/%.o : %.cc $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.cc
+	mkdir -p $(BUILD_DIR)
 	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) $(MAGICK_CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/%.o : %.c $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.c
+	mkdir -p $(BUILD_DIR)
 	$(CC) -I$(RGB_INCDIR) $(CFLAGS) -c -o $@ $<
 
 clean:
 	$(MAKE) -C $(RGB_LIBDIR) clean
 	rm -rf $(BUILD_DIR)
 	rm -f $(TARGET)
-
-$(BUILD_DIR):
-	mkdir $(BUILD_DIR)
 
 run: all
 	./$(TARGET)
