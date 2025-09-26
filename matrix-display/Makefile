@@ -29,6 +29,8 @@ $(TARGET) : $(addprefix $(BUILD_DIR)/, $(OBJECTS)) $(RGB_LIBRARY)
 $(RGB_LIBRARY): FORCE
 	$(MAKE) -C $(RGB_LIBDIR) HARDWARE_DESC=$(HARDWARE_DESC)
 
+$(BUILD_DIR)/main.o: i2c.h MPU6050.h
+
 $(BUILD_DIR)/%.o : %.cc
 	mkdir -p $(BUILD_DIR)
 	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) $(MAGICK_CXXFLAGS) -c -o $@ $<
