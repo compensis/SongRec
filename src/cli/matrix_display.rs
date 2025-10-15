@@ -19,7 +19,7 @@ impl MatrixDisplay {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(self: &mut Self) {
         if let Some(mut process) = self.process.take() {
             process.kill().unwrap();
         }
@@ -29,7 +29,7 @@ impl MatrixDisplay {
     }
 
     #[allow(dead_code)]
-    pub fn clear_screen(&self, ) {
+    pub fn clear_screen(self: &Self, ) {
         if let Some(process) = &self.process {
             let mut stdin = process.stdin.as_ref().unwrap();
             writeln!(stdin, "").unwrap();
@@ -37,7 +37,7 @@ impl MatrixDisplay {
     }
 
     #[allow(dead_code)]
-    pub fn writeln(&self, line: &str) {
+    pub fn writeln(self: &Self, line: &str) {
         if let Some(process) = &self.process {
             let mut stdin = process.stdin.as_ref().unwrap();
             let line = &textwrap::fill(&line, Self::CHARS_PER_LINE);
@@ -45,7 +45,7 @@ impl MatrixDisplay {
         }
     }
 
-    pub fn show_song(&mut self, song_name: &str, artist: &str, release_year: Option<String>, cover_image: Option<Vec<u8>>) {
+    pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
         if let Some(mut process) = self.process.take() {
             process.kill().unwrap();
         }
@@ -70,5 +70,11 @@ impl MatrixDisplay {
         drop(stdin);
         // Keep process so that the image is still displayed
         self.process = Some(process);
+    }
+
+    pub fn off(self: &mut Self) {
+        if let Some(mut process) = self.process.take() {
+            process.kill().unwrap();
+        }
     }
 }
