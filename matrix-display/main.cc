@@ -19,6 +19,7 @@
 using namespace rgb_matrix;
 
 extern void showAnimation(RGBMatrix *matrix, const char *filename);
+void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas);
 
 // Make sure we can exit gracefully when Ctrl-C is pressed.
 volatile bool interrupt_received = false;
@@ -63,7 +64,7 @@ void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas) {
 
 enum struct DISPLAY_ORIENTATION {UPRIGHT, RIGHT, UPSIDE_DOWN, LEFT};
 
-DISPLAY_ORIENTATION getDisplayOrientation() {
+static DISPLAY_ORIENTATION getDisplayOrientation() {
   MPU6050 gyro;
   MPU6050::ORIENTATION orientation = gyro.getOrientation();
 
@@ -77,7 +78,7 @@ DISPLAY_ORIENTATION getDisplayOrientation() {
 }
 
 // Read a Image from stdin, cale to the size of the matrix and drow it on canvas
-void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
+static void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
   int target_width = canvas->width();
   int target_height = canvas->height();
   Magick::Image image;
@@ -115,7 +116,7 @@ void receiveScaleAndDrawImage(Canvas *canvas, DISPLAY_ORIENTATION orientation) {
 }
 
 // Shorten the input string by replacing part of it with an ellipsis ("…").
-void shortenStr(char *str) {
+static void shortenStr(char *str) {
   const char * ellipsis = "…";
 
   // If the string is shorter than the ellipsis itself, there is nothing we can do
@@ -139,7 +140,7 @@ void shortenStr(char *str) {
   strcpy(&str[i], ellipsis);
 }
 
-void drawYear(Canvas *canvas, const Font &font, const Color &text_color, const Color *background_color, char *year, int letter_spacing) {
+static void drawYear(Canvas *canvas, const Font &font, const Color &text_color, const Color *background_color, char *year, int letter_spacing) {
   int x = 0;
   int y = 0;
 
@@ -158,7 +159,7 @@ void drawYear(Canvas *canvas, const Font &font, const Color &text_color, const C
   rgb_matrix::DrawText(canvas, font, x, y, text_color, background_color, year, letter_spacing);
 }
 
-void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist,  char *year)  {
+static void drawSongInfoText(Canvas *canvas, const Font &font, char *name, char *artist,  char *year)  {
   const int x = 0;
   const int y = 0;
   const int width = canvas->width() - x;

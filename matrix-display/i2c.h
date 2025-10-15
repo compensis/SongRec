@@ -50,7 +50,7 @@ static inline int i2cSmbusAccess(int fd, char rw, uint8_t command, int size, uni
   return ioctl(fd, I2C_SMBUS, &args);
 }
 
-int i2cSetup(int devId) {
+static int i2cSetup(int devId) {
   const char *device = "/dev/i2c-1";
   int fd ;
 
@@ -68,7 +68,7 @@ int i2cSetup(int devId) {
 }
 
 // Write an 8-bit value to the given register
-int i2cWriteReg8(int fd, int reg, int value) {
+static int i2cWriteReg8(int fd, int reg, int value) {
   union i2c_smbus_data data ;
 
   data.byte = value ;
@@ -76,7 +76,7 @@ int i2cWriteReg8(int fd, int reg, int value) {
 }
 
 // Read an 8-bit value from a regsiter on the device
-int i2cReadReg8(int fd, int reg) {
+static int i2cReadReg8(int fd, int reg) {
   union i2c_smbus_data data;
 
   if (i2cSmbusAccess(fd, I2C_SMBUS_READ, reg, I2C_SMBUS_BYTE_DATA, &data)) {

@@ -13,8 +13,7 @@ using rgb_matrix::FrameCanvas;
 using ImageVector = std::vector<Magick::Image>;
 
 extern void CopyImageToCanvas(const Magick::Image &image, Canvas *canvas);
-
-namespace { // Entities within this block are only accessible within this .cpp file
+void showAnimation(RGBMatrix *matrix, const char *filename);
 
 static bool isStdinEmpty() {
   struct timeval tv = { 0L, 0L };
@@ -53,7 +52,7 @@ static ImageVector loadAnimationImages(const char *filename) {
 
 // An animated image has to constantly swap to the next frame.
 // We're using double-buffering and fill an offscreen buffer first, then show.
-void ShowAnimatedImage(const ImageVector &images, RGBMatrix *matrix) {
+static void ShowAnimatedImage(const ImageVector &images, RGBMatrix *matrix) {
   FrameCanvas *offscreen_canvas = matrix->CreateFrameCanvas();
 
   while (true) {
@@ -70,8 +69,6 @@ void ShowAnimatedImage(const ImageVector &images, RGBMatrix *matrix) {
     }
   }
 }
-
-} // namespace
 
 void showAnimation(RGBMatrix *matrix, const char *filename) {
   const ImageVector images = loadAnimationImages(filename);

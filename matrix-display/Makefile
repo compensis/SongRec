@@ -18,7 +18,7 @@ MAGICK_LDFLAGS?=$(shell GraphicsMagick++-config --ldflags --libs)
 
 HARDWARE_DESC?=adafruit-hat-pwm
 
-CFLAGS=-Wall -Wextra -Wno-unused-parameter -O3 -g
+CFLAGS=-Wall -Wextra -Wshadow -Wmissing-declarations -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wno-unused-parameter -Wnull-dereference -O3 -g
 CXXFLAGS=$(CFLAGS)
 
 all: $(TARGET)
