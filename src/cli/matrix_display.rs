@@ -8,7 +8,6 @@ pub struct MatrixDisplay {
 }
 
 impl MatrixDisplay {
-    const CHARS_PER_LINE: usize = 12;
     const DATA_LINK_ESCAPE: char = '\u{10}';
     const UNIT_SEPARATOR: char = '\u{1F}';
 
@@ -26,23 +25,6 @@ impl MatrixDisplay {
         if let Ok(child) = self.command.stdin(Stdio::piped()).spawn() {
             self.process = Some(child);
         };
-    }
-
-    #[allow(dead_code)]
-    pub fn clear_screen(self: &Self, ) {
-        if let Some(process) = &self.process {
-            let mut stdin = process.stdin.as_ref().unwrap();
-            writeln!(stdin, "").unwrap();
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn writeln(self: &Self, line: &str) {
-        if let Some(process) = &self.process {
-            let mut stdin = process.stdin.as_ref().unwrap();
-            let line = &textwrap::fill(&line, Self::CHARS_PER_LINE);
-            writeln!(stdin, "{}", line).unwrap();
-        }
     }
 
     pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
