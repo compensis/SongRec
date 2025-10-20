@@ -11,6 +11,7 @@ trait SongHistoryRecordListStore {
     fn remove_song_history_record(self: &mut Self, to_remove: SongHistoryRecord);
     fn remove_song(self: &mut Self, to_remove: Song);
     fn add_song_history_record(self: &mut Self, to_add: &SongHistoryRecord);
+    #[allow(dead_code)]
     fn add_song_history_records(self: &mut Self, to_add: &Vec<SongHistoryRecord>);
     fn get_song_history_record(self: &mut Self, iter: &gtk::TreeIter) -> Option<SongHistoryRecord>;
 }
