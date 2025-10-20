@@ -162,6 +162,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::SongRecognized(message) => {
                 let mut last_track_borrow = last_track.borrow_mut();
                 let track_key = Some(message.track_key.clone());
+                let _ = &message.signature;
 
                 if *last_track_borrow != track_key {
                     mpris_player.as_ref().map(|p| update_song(p, &message));
@@ -214,6 +215,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     display_controller.handle_microphone_volume_low();
                 }
             }
+            #[cfg(feature = "gui")]
+            _ => {}
         }
         glib::Continue(true)
     });

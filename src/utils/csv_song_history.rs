@@ -23,6 +23,7 @@ pub struct SongHistoryRecord {
     pub recognition_date: String,
 }
 
+#[cfg(feature = "gui")]
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Song {
     pub song_name: String,
@@ -34,10 +35,12 @@ pub struct Song {
     pub genre: Option<String>,
 }
 
+#[cfg(feature = "gui")]
 pub trait IsSong {
     fn get_song(self: Self) -> Song;
 }
 
+#[cfg(feature = "gui")]
 impl IsSong for SongHistoryRecord {
     fn get_song(self: Self) -> Song {
         return Song {
