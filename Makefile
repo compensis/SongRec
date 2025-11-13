@@ -13,8 +13,8 @@ clean:
 	$(MAKE) -C matrix-display clean
 	cargo clean
 
-run: all
-	sudo ./target/release/songrec
+run: clear_terminal
+	sudo -E $$(which cargo) run --release --no-default-features --features matrix-display
 
 restart:
 	sudo systemctl restart songrec.service

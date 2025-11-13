@@ -1,62 +1,104 @@
-use std::io::Write;
-use std::process::Command;
-use std::process::Stdio;
+use std::thread;
+use std::sync::{Arc, Mutex};
+use rpi_led_matrix::{LedFont, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
 
 pub struct MatrixDisplay {
-    process: Option<std::process::Child>,
-    command: std::process::Command,
+    message: Arc<Mutex<Option<MatrixDisplayMessage>>>,
+}
+
+enum MatrixDisplayMessage {
+    ShwoAnimation,
+    ShowSong { 
+        song_name: String,
+        artist: String,
+        _release_year: Option<String>,
+        _cover_image: Option<Vec<u8>>,
+    },
+    Off,
 }
 
 impl MatrixDisplay {
-    const DATA_LINK_ESCAPE: char = '\u{10}';
-    const UNIT_SEPARATOR: char = '\u{1F}';
 
     pub fn new() -> Self {
-        Self {
-            process: None,
-            command: Command::new("matrix-display/matrixdisplay"),
-        }
+
+        let shared_message: Arc<Mutex<Option<MatrixDisplayMessage>>> = Arc::new(Mutex::new(None));
+
+        let message_stread: Arc<Mutex<Option<MatrixDisplayMessage>>> = Arc::clone(&shared_message);
+        thread::spawn(move || {
+
+            let mut options = LedMatrixOptions::new();
+            let mut runtime_options = LedRuntimeOptions::new();
+
+            options.set_hardware_mapping("adafruit-hat-pwm");
+            options.set_rows(64);
+            options.set_cols(64);
+            options.set_pwm_lsb_nanoseconds(130);
+            let _ = options.set_brightness(75);
+
+            runtime_options.set_gpio_slowdown(3);
+
+            let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap();
+
+            let mut canvas = matrix.offscreen_canvas();
+
+            let font_file = std::path::Path::new("./external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
+            let font = LedFont::new(font_file).unwrap();
+            
+            let (width, _height) = canvas.canvas_size();
+
+            let text = "Hello Neo!";
+
+            let options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
+            
+            canvas.clear();
+            canvas.draw_text(&font, text, &options);
+            canvas = matrix.swap(canvas);
+            
+            loop {
+                let mut locked_message = message_stread.lock().unwrap();
+
+                if let Some(ref message) = locked_message.take() {
+                    canvas.clear();
+                    match message {
+                        MatrixDisplayMessage::ShwoAnimation => {
+                            canvas.draw_text(&font, "Recording started!", &options);
+                        }
+                        MatrixDisplayMessage::ShowSong{ song_name, artist, _release_year: _, _cover_image: _ } => {
+                            let height = canvas.draw_text(&font, song_name, &options);
+                            let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
+                            canvas.draw_text(&font, artist, &artist_options);
+                        }
+                        MatrixDisplayMessage::Off => {
+                            // Display nothing
+                        }
+                    }
+                    canvas = matrix.swap(canvas);
+                }
+            };
+        });
+
+        Self { message: shared_message }
+    }
+
+    fn set_message(self: &mut Self,message: MatrixDisplayMessage) {
+        let mut locked_message = self.message.lock().unwrap();
+        *locked_message = Some(message);
     }
 
     pub fn init(self: &mut Self) {
-        if let Some(mut process) = self.process.take() {
-            process.kill().unwrap();
-        }
-        if let Ok(child) = self.command.stdin(Stdio::piped()).spawn() {
-            self.process = Some(child);
-        };
+        self.set_message(MatrixDisplayMessage::ShwoAnimation);
     }
 
     pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
-        if let Some(mut process) = self.process.take() {
-            process.kill().unwrap();
-        }
-        // Start a new matrix display program process, becaus we need to drop stdin aft the
-        // image is written so we cant reuse it next time
-        let mut process = self.command.stdin(Stdio::piped()).spawn().unwrap();
-        let mut stdin = process.stdin.take().unwrap();
-
-        write!(stdin, "{}{}{}", song_name, Self::UNIT_SEPARATOR, artist).unwrap();
-        if let Some(year) = release_year {
-            write!(stdin, "{}{}", Self::UNIT_SEPARATOR, year).unwrap();
-        }
-        writeln!(stdin).unwrap();
-
-        if let Some(image) = cover_image {
-            writeln!(stdin, "{}", Self::DATA_LINK_ESCAPE).unwrap();
-            stdin.write_all(&image).unwrap();
-        }
-
-        // Drop stdin after the image is written, to close stdin,
-        // to show that this was all the data
-        drop(stdin);
-        // Keep process so that the image is still displayed
-        self.process = Some(process);
+        self.set_message(MatrixDisplayMessage::ShowSong{
+            song_name: song_name.to_string(),
+            artist: artist.to_string(),
+            _release_year: release_year.clone(),
+            _cover_image: cover_image.clone(),
+        });
     }
 
     pub fn off(self: &mut Self) {
-        if let Some(mut process) = self.process.take() {
-            process.kill().unwrap();
-        }
+        self.set_message(MatrixDisplayMessage::Off);
     }
 }
