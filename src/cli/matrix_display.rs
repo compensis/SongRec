@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::BufReader;
 use std::time::Duration;
@@ -52,12 +53,7 @@ impl MatrixDisplay {
 
             let options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
 
-            let file = File::open("./matrix-display/animation16x16.gif").unwrap();
-            let reader = BufReader::new(file);
-            let decoder = GifDecoder::new(reader).unwrap();
-
-            let frames = decoder.into_frames();
-            let frames = frames.collect_frames().unwrap();
+            let mut animation = Animation::new("./matrix-display/animation16x16.gif");
             
             loop {
                 let mut locked_message = message_stread.lock().unwrap();
@@ -66,23 +62,23 @@ impl MatrixDisplay {
                     canvas.clear();
                     match message {
                         MatrixDisplayMessage::ShwoAnimation => {
-                            //canvas.draw_text(&font, "Recording started!", &options);
+                            // Keep showing anaimation also during the next loop iteration
+                            *locked_message = Some(MatrixDisplayMessage::ShwoAnimation);
                             drop(locked_message);
-                            canvas = show_animation(&frames, canvas, &matrix, &message_stread);
+                            canvas = animation.show_next_frame(canvas);
                         }
                         MatrixDisplayMessage::ShowSong{ song_name, artist, _release_year: _, _cover_image: _ } => {
                             drop(locked_message);
                             let height = canvas.draw_text(&font, song_name, &options);
                             let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
                             canvas.draw_text(&font, artist, &artist_options);
-                            canvas = matrix.swap(canvas);
                         }
                         MatrixDisplayMessage::Off => {
                             drop(locked_message);
                             // Display nothing
-                            canvas = matrix.swap(canvas);
                         }
                     }
+                    canvas = matrix.swap(canvas);
                 }
             };
         });
@@ -113,39 +109,51 @@ impl MatrixDisplay {
     }
 }
 
-fn show_animation(
-    frames: &[image::Frame],
-    canvas: LedCanvas,
-    matrix: &LedMatrix,
-    message: &Arc<Mutex<Option<MatrixDisplayMessage>>>,
-) -> LedCanvas {
-    let (width, height) = canvas.canvas_size();
-    let mut canvas = canvas;
+struct Animation {
+    frames: Vec<image::Frame>,
+    index: usize,
+}
 
-    for (_i, frame) in frames.iter().enumerate().cycle() {
-        let image_buffer = frame.buffer();
-        let (numerator, denominator) = frame.delay().numer_denom_ms();
-        let delay_ms = numerator / denominator;
+impl Animation {
+    fn new<P: AsRef<std::path::Path>>(path: P) -> Self {
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let decoder = GifDecoder::new(reader).unwrap();
 
-        let x_offset = (width - (image_buffer.width() as i32)) / 2;
-        let y_offset = (height - (image_buffer.height() as i32)) / 2;
-
-        canvas.clear();
-
-        for (x, y, pixel) in image_buffer.enumerate_pixels() {
-        let [r, g, b, _a] = pixel.0;
-            //println!("({},{}): R{} G{} B{}", x, y, r, g, b);
-            let color = LedColor { red: r, green: g, blue: b };
-            canvas.set(x as i32 + x_offset, y as i32 + y_offset, &color);
+        let frames = decoder.into_frames();
+        let frames = frames.collect_frames().unwrap();
+        Self {
+            frames,
+            index: 0,
         }
-        canvas = matrix.swap(canvas);
-        thread::sleep(Duration::from_millis(delay_ms as u64));
-        
-        if let Some(ref _message) = *message.lock().unwrap() {
-            break;
-        }
-        
     }
 
-    canvas
+    fn show_next_frame(
+        &mut self,
+        mut canvas: LedCanvas,
+    ) -> LedCanvas {
+        let frame = &self.frames[self.index];
+        self.index = (self.index + 1) % self.frames.len();
+
+        let image_buffer = frame.buffer();
+        let (numerator, denominator) = frame.delay().numer_denom_ms();
+        let delay_ms = (numerator / denominator) as u64;
+
+        let (width, height) = canvas.canvas_size();
+
+        let image_width = i32::try_from(image_buffer.width()).unwrap();
+        let image_height = i32::try_from(image_buffer.height()).unwrap();
+        let x_offset = (width - image_width) / 2;
+        let y_offset = (height - image_height) / 2;
+
+        for (x, y, pixel) in image_buffer.enumerate_pixels() {
+            let image::Rgba([red, green, blue, _alpha]) = *pixel;
+            let color = LedColor { red, green, blue };
+            canvas.set(x as i32 + x_offset, y as i32 + y_offset, &color);
+        }
+
+        thread::sleep(Duration::from_millis(delay_ms));
+
+        canvas
+    }
 }
