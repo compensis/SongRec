@@ -1,10 +1,11 @@
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::BufReader;
+use std::io::Cursor;
 use std::time::Duration;
 use std::thread;
 use std::sync::{Arc, Mutex};
-use image::{codecs::gif::GifDecoder, AnimationDecoder};
+use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
 
 pub struct MatrixDisplay {
@@ -16,8 +17,8 @@ enum MatrixDisplayMessage {
     ShowSong { 
         song_name: String,
         artist: String,
-        _release_year: Option<String>,
-        _cover_image: Option<Vec<u8>>,
+        release_year: Option<String>,
+        cover_image: Option<Vec<u8>>,
     },
     Off,
 }
@@ -67,11 +68,16 @@ impl MatrixDisplay {
                             drop(locked_message);
                             canvas = animation.show_next_frame(canvas);
                         }
-                        MatrixDisplayMessage::ShowSong{ song_name, artist, _release_year: _, _cover_image: _ } => {
+                        MatrixDisplayMessage::ShowSong{ song_name: _, artist: _, release_year: _, cover_image} => {
                             drop(locked_message);
+                            /*
                             let height = canvas.draw_text(&font, song_name, &options);
                             let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
                             canvas.draw_text(&font, artist, &artist_options);
+                            */
+                            if let Some(image_data) = cover_image {
+                                canvas = show_image(image_data, canvas);
+                            }
                         }
                         MatrixDisplayMessage::Off => {
                             drop(locked_message);
@@ -86,7 +92,7 @@ impl MatrixDisplay {
         Self { message: shared_message }
     }
 
-    fn set_message(self: &mut Self,message: MatrixDisplayMessage) {
+    fn set_message(self: &mut Self, message: MatrixDisplayMessage) {
         let mut locked_message = self.message.lock().unwrap();
         *locked_message = Some(message);
     }
@@ -99,8 +105,8 @@ impl MatrixDisplay {
         self.set_message(MatrixDisplayMessage::ShowSong{
             song_name: song_name.to_string(),
             artist: artist.to_string(),
-            _release_year: release_year.clone(),
-            _cover_image: cover_image.clone(),
+            release_year: release_year.clone(),
+            cover_image: cover_image.clone(),
         });
     }
 
@@ -156,4 +162,27 @@ impl Animation {
 
         canvas
     }
+}
+
+fn show_image(
+    image_data: &Vec<u8>,
+    mut canvas: LedCanvas,
+) -> LedCanvas {
+    let cursor = Cursor::new(&image_data);
+    let dynamic_image = ImageReader::new(cursor)
+        .with_guessed_format().unwrap()
+        .decode().unwrap();
+    let (width, height) = canvas.canvas_size();
+    let resized_image = dynamic_image.resize_exact(
+        width as u32, 
+        height as u32, 
+        image::imageops::FilterType::Lanczos3,
+    );
+    let rgb_image = resized_image.to_rgb8();
+    for (x, y, pixel) in rgb_image.enumerate_pixels() {
+        let image::Rgb([red, green, blue]) = *pixel;
+        let color = LedColor { red, green, blue };
+        canvas.set(x as i32, y as i32, &color);
+    }
+    canvas
 }
