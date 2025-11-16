@@ -96,10 +96,14 @@ impl MatrixDisplay {
                         }
                         MatrixDisplayMessage::ShowSong{ song_name, artist, release_year, cover_image} => {
                             drop(locked_message);
-                            canvas = show_info(song_name, artist, release_year, &font, canvas);
-
-                            if let Some(image_data) = cover_image {
-                                canvas = show_image(image_data, canvas);
+                            let orientation = orientation_sensor.get_orientation().into();
+                            canvas = match (orientation, cover_image) {
+                                (DisplayOrientation::Upright, _) | (_, None) => {
+                                    show_info(song_name, artist, release_year, &font, canvas)
+                                },
+                                (_, Some(image_data)) => {
+                                    show_image(image_data, canvas)
+                                }
                             }
                         }
                         MatrixDisplayMessage::Off => {
