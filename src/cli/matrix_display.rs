@@ -101,8 +101,8 @@ impl MatrixDisplay {
                                 (DisplayOrientation::Upright, _) | (_, None) => {
                                     show_info(song_name, artist, release_year, &font, canvas)
                                 },
-                                (_, Some(image_data)) => {
-                                    show_image(image_data, canvas)
+                                (orientation, Some(image_data)) => {
+                                    show_image(image_data, &orientation, canvas)
                                 }
                             }
                         }
@@ -211,19 +211,26 @@ pub fn show_info(
 
 fn show_image(
     image_data: &Vec<u8>,
+    orientation: &DisplayOrientation,
     mut canvas: LedCanvas,
 ) -> LedCanvas {
+    let (width, height) = canvas.canvas_size();
     let cursor = Cursor::new(&image_data);
     let dynamic_image = ImageReader::new(cursor)
         .with_guessed_format().unwrap()
-        .decode().unwrap();
-    let (width, height) = canvas.canvas_size();
-    let resized_image = dynamic_image.resize_exact(
-        width as u32, 
-        height as u32, 
-        image::imageops::FilterType::Lanczos3,
-    );
-    let rgb_image = resized_image.to_rgb8();
+        .decode().unwrap()
+        .resize_exact(
+            width as u32, 
+            height as u32, 
+            image::imageops::FilterType::Lanczos3,
+        );
+    let rotated_image = match orientation {
+        DisplayOrientation::Left => dynamic_image.rotate90(),
+        DisplayOrientation::Right => dynamic_image.rotate270(),
+        DisplayOrientation::UpsideDown => dynamic_image.rotate180(),
+        _ => dynamic_image,
+    };
+    let rgb_image = rotated_image.to_rgb8();
     for (x, y, pixel) in rgb_image.enumerate_pixels() {
         let image::Rgb([red, green, blue]) = *pixel;
         let color = LedColor { red, green, blue };
