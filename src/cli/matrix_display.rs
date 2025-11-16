@@ -78,11 +78,7 @@ impl MatrixDisplay {
             let mut canvas = matrix.offscreen_canvas();
 
             let font_file = std::path::Path::new("./external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
-            let _heightfont = LedFont::new(font_file).unwrap();
-            
-            let (width, _height) = canvas.canvas_size();
-
-            let _options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
+            let font = LedFont::new(font_file).unwrap();
 
             let mut animation = Animation::new("./matrix-display/animation16x16.gif");
             
@@ -98,13 +94,10 @@ impl MatrixDisplay {
                             drop(locked_message);
                             canvas = animation.show_next_frame(canvas);
                         }
-                        MatrixDisplayMessage::ShowSong{ song_name: _, artist: _, release_year: _, cover_image} => {
+                        MatrixDisplayMessage::ShowSong{ song_name, artist, release_year, cover_image} => {
                             drop(locked_message);
-                            /*
-                            let height = canvas.draw_text(&font, song_name, &options);
-                            let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
-                            canvas.draw_text(&font, artist, &artist_options);
-                            */
+                            canvas = show_info(song_name, artist, release_year, &font, canvas);
+
                             if let Some(image_data) = cover_image {
                                 canvas = show_image(image_data, canvas);
                             }
@@ -192,6 +185,24 @@ impl Animation {
 
         canvas
     }
+}
+
+pub fn show_info(
+    song_name: &str,
+    artist: &str,
+    _release_year: &Option<String>,
+    font: &LedFont,
+    mut canvas: LedCanvas,
+) -> LedCanvas {
+    let (width, _height) = canvas.canvas_size();
+
+    let options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
+    let height = canvas.draw_text(font, song_name, &options);
+
+    let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
+    canvas.draw_text(font, artist, &artist_options);
+
+    canvas
 }
 
 fn show_image(
