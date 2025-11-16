@@ -7,6 +7,7 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
+use crate::cli::orientation_sensor::{OrientationSensor, SensorOrientation};
 
 pub struct MatrixDisplay {
     message: Arc<Mutex<Option<MatrixDisplayMessage>>>,
@@ -14,6 +15,7 @@ pub struct MatrixDisplay {
 
 enum MatrixDisplayMessage {
     ShwoAnimation,
+    #[allow(dead_code)]
     ShowSong { 
         song_name: String,
         artist: String,
@@ -21,6 +23,26 @@ enum MatrixDisplayMessage {
         cover_image: Option<Vec<u8>>,
     },
     Off,
+}
+
+#[derive(Debug)]
+enum DisplayOrientation {
+    Upright,
+    Right,
+    UpsideDown,
+    Left,
+}
+
+impl From<SensorOrientation> for DisplayOrientation {
+    fn from(orientation: SensorOrientation) -> Self {
+        match orientation {
+            SensorOrientation::YTop => DisplayOrientation::Upright,
+            SensorOrientation::ZTop => DisplayOrientation::Right,
+            SensorOrientation::YDown => DisplayOrientation::UpsideDown,
+            SensorOrientation::ZDown => DisplayOrientation::Left,
+            _ => DisplayOrientation::Upright,
+        }
+    }
 }
 
 impl MatrixDisplay {
@@ -31,6 +53,14 @@ impl MatrixDisplay {
 
         let message_stread: Arc<Mutex<Option<MatrixDisplayMessage>>> = Arc::clone(&shared_message);
         thread::spawn(move || {
+
+            let mut orientation_sensor = OrientationSensor::new();
+
+            let orientation = orientation_sensor.get_orientation();
+            println!("Senor Orientation: {:?}", orientation);
+
+            let orientation: DisplayOrientation = orientation_sensor.get_orientation().into();
+            println!("Display Orientation: {:?}", orientation);
 
             let mut options = LedMatrixOptions::new();
             let mut runtime_options = LedRuntimeOptions::new();
@@ -48,11 +78,11 @@ impl MatrixDisplay {
             let mut canvas = matrix.offscreen_canvas();
 
             let font_file = std::path::Path::new("./external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
-            let font = LedFont::new(font_file).unwrap();
+            let _heightfont = LedFont::new(font_file).unwrap();
             
             let (width, _height) = canvas.canvas_size();
 
-            let options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
+            let _options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
 
             let mut animation = Animation::new("./matrix-display/animation16x16.gif");
             

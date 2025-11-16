@@ -52,13 +52,16 @@ toml = "0.4.2"
 app_dirs = { version = "1.2.1", optional = true } # For obtaining and creating either the %APPDATA%, the dotfile path or similar
 rpi-led-matrix = { path = "external/rust-rpi-rgb-led-matrix/rpi-led-matrix", optional = true }
 image  = { version = "0.25", optional = true }
+mpu6050  = { version = "0.1.6", optional = true }
+linux-embedded-hal = { version = "0.3.1", optional = true }
 
 [features]
 default = ["gui"]
 gui = ["gtk", "gdk", "gio", "percent-encoding", "directories", "app_dirs", "gdk-pixbuf"]
 slowprint = ["dep:slowprint", "clearscreen"]
 textwrap = ["dep:textwrap", "terminal_size"]
-matrix-display = ["dep:textwrap", "terminal_size", "rpi-led-matrix", "image"]
+orientation_senso = ["mpu6050", "linux-embedded-hal"]
+matrix-display = ["dep:textwrap", "terminal_size", "rpi-led-matrix", "image", "orientation_senso"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gag = "0.1.10" # Crate to silence stderr when CPAL produces uncontrolled AlsaLib output
