@@ -1,13 +1,16 @@
 use std::convert::TryFrom;
-use std::fs::File;
-use std::io::BufReader;
 use std::io::Cursor;
+use std::io::Write;
 use std::thread;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
+use tempfile::NamedTempFile;
 use crate::cli::orientation_sensor::{OrientationSensor, SensorOrientation};
+
+const FONT_DATA: &[u8] = include_bytes!("../../external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
+const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!("../../matrix-display/animation16x16.gif");
 
 pub enum MatrixDisplayMessage {
     ShwoAnimation,
@@ -88,10 +91,12 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
 
     let mut canvas = matrix.offscreen_canvas();
 
-    let font_file = std::path::Path::new("./external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
-    let font = LedFont::new(font_file).unwrap();
+    // LedFont::new needs a real file, so create a temporary file from the data
+    let mut temp_font_file = NamedTempFile::new().unwrap();
+    let _ = temp_font_file.write(FONT_DATA);
+    let font = LedFont::new(temp_font_file.path()).unwrap();
 
-    let mut animation = Animation::new("./matrix-display/animation16x16.gif");
+    let mut animation = Animation::new(ANIMATION_IMAGE_DATA);
     
     loop {
         if let Some(ref message) = shared_message.take() {
@@ -127,11 +132,11 @@ struct Animation {
     index: usize,
 }
 
+
 impl Animation {
-    fn new<P: AsRef<std::path::Path>>(path: P) -> Self {
-        let file = File::open(path).unwrap();
-        let reader = BufReader::new(file);
-        let decoder = GifDecoder::new(reader).unwrap();
+    fn new(data: &[u8]) -> Self {
+        let cursor = Cursor::new(data);
+        let decoder = GifDecoder::new(cursor).unwrap();
 
         let frames = decoder.into_frames();
         let frames = frames.collect_frames().unwrap();
