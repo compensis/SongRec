@@ -191,20 +191,106 @@ impl Animation {
     }
 }
 
-pub fn show_info(
-    song_name: &str,
+/// Replaces the last word in the given string with an ellipsis ('…').
+/// 
+/// Behavior:
+/// - If the string contains at least one space, everything after the last space is removed,
+///   and an ellipsis is appended.
+/// - If the string has no spaces and at least two characters, the last character is replaced
+///   with an ellipsis.
+/// - Strings with fewer than 2 characters remain unchanged.
+fn replace_last_word_with_ellipsis(s: &mut String) {
+    if let Some(pos) = s.rfind(' ') {
+        // Found a space: truncate everything after the last space
+        s.truncate(pos);
+    } else if s.chars().count() >= 2 {
+        // No space found, but string has at least 2 characters
+        // Use char_indices to handle Unicode safely
+        let mut chars = s.char_indices().rev();
+        if let Some((second_last_pos, _)) = chars.nth(1) {
+            // Truncate up to the second-to-last character
+            s.truncate(second_last_pos);
+        }
+    } else {
+        // String too short (<2 characters), do nothing
+        return;
+    }
+
+    // Append the ellipsis to indicate truncation
+    s.push('…');
+}
+
+
+fn draw_year(
+    year: &str, 
+    font: &LedFont,
+    mut canvas: LedCanvas
+) -> LedCanvas {
+    // Only the last two digits of the year
+    let year = &year[year.len()-2..];
+
+    let (canvas_width, _canvas_height) = canvas.canvas_size();
+
+    // First draw outsice canvas to get width
+    let options = TextDrawOptions::new().position(canvas_width, 0);
+    let width = canvas.draw_text(font, year, &options);
+
+    // Place the year in the upper right corner.
+    let x = canvas_width - width + 1;
+    let y = font.height().unwrap_or(0) - 1;
+    let options = options.position(x, y);
+    canvas.draw_text(font, year, &options);
+
+    canvas
+}
+
+fn show_info(
+    name: &str,
     artist: &str,
-    _release_year: &Option<String>,
+    release_year: &Option<String>,
     font: &LedFont,
     mut canvas: LedCanvas,
 ) -> LedCanvas {
-    let (width, _height) = canvas.canvas_size();
+    let (canvas_width, canvas_height) = canvas.canvas_size();
+    let mut name = name.to_owned();
+    let mut artist = artist.to_owned();
 
-    let options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width});
-    let height = canvas.draw_text(font, song_name, &options);
+    let base_options =
+        TextDrawOptions::new().layout(TextLayout::Wrapped { line_width: canvas_width });
 
-    let artist_options = TextDrawOptions::new().layout(TextLayout::Wrapped{line_width: width}).position(0, height);
-    canvas.draw_text(font, artist, &artist_options);
+    // Determine initial heights
+    let mut name_height = canvas.draw_text(font, &name, &base_options);
+    let mut artist_height = canvas.draw_text(font, &artist, &base_options);
+
+    // Shorten strings until they fit
+    while name_height + artist_height > canvas_height {
+        if name_height > artist_height {
+            replace_last_word_with_ellipsis(&mut name);
+            name_height = canvas.draw_text(font, &name, &base_options);
+        } else {
+            replace_last_word_with_ellipsis(&mut artist);
+            artist_height = canvas.draw_text(font, &artist, &base_options);
+        }
+    }
+
+    canvas.clear();
+
+    // Draw artist at the bottom
+    let artist_y = canvas_height - artist_height;
+    let artist_options = base_options.position(0, artist_y);
+    canvas.draw_text(font, &artist, &artist_options);
+
+    // Draw name centered above artist
+    let name_y = (canvas_height - name_height - artist_height) / 2;
+    let name_options = artist_options.position(0, name_y);
+    canvas.draw_text(font, &name, &name_options);
+
+    // Optional: draw year at the top
+    if let Some(year) = release_year {
+        if name_y >= font.height().unwrap_or(0) {
+            canvas = draw_year(year, font, canvas);
+        }
+    }
 
     canvas
 }
