@@ -83,6 +83,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     options.set_rows(64);
     options.set_cols(64);
     options.set_pwm_lsb_nanoseconds(130);
+    options.set_pixel_mapper_config("Rotate:180");
     let _ = options.set_brightness(75);
 
     runtime_options.set_gpio_slowdown(3);
