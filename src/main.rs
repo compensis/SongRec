@@ -27,6 +27,7 @@ mod cli {
     pub mod cli_main;
     mod matrix_display;
     mod display_controller;
+    mod matrix_display_thread;
     mod orientation_sensor;
 }
 
