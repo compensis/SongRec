@@ -21,6 +21,29 @@ pub enum MatrixDisplayMessage {
     Off,
 }
 
+#[derive(Clone)]
+pub struct SharedMatrixDisplayMessage {
+    message: Arc<Mutex<Option<MatrixDisplayMessage>>>,
+}
+
+impl SharedMatrixDisplayMessage {
+    pub fn new() -> Self {
+        Self {
+            message: Arc::new(Mutex::new(None))
+        }
+    }
+
+    pub fn set(&self, message: MatrixDisplayMessage) {
+        let mut locked_message = self.message.lock().unwrap();
+        *locked_message = Some(message);
+    }
+
+    fn take(&self) -> Option<MatrixDisplayMessage> {
+        let mut locked_message = self.message.lock().unwrap();
+        locked_message.take()
+    }
+}
+
 #[derive(Debug)]
 enum DisplayOrientation {
     Upright,
@@ -41,7 +64,7 @@ impl From<SensorOrientation> for DisplayOrientation {
     }
 }
 
-pub fn matrix_display_thread(message: Arc<Mutex<Option<MatrixDisplayMessage>>>) {
+pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let mut orientation_sensor = OrientationSensor::new();
 
     let orientation = orientation_sensor.get_orientation();
@@ -71,19 +94,15 @@ pub fn matrix_display_thread(message: Arc<Mutex<Option<MatrixDisplayMessage>>>) 
     let mut animation = Animation::new("./matrix-display/animation16x16.gif");
     
     loop {
-        let mut locked_message = message.lock().unwrap();
-
-        if let Some(ref message) = locked_message.take() {
+        if let Some(ref message) = shared_message.take() {
             canvas.clear();
             match message {
                 MatrixDisplayMessage::ShwoAnimation => {
                     // Keep showing anaimation also during the next loop iteration
-                    *locked_message = Some(MatrixDisplayMessage::ShwoAnimation);
-                    drop(locked_message);
+                    shared_message.set(MatrixDisplayMessage::ShwoAnimation);
                     canvas = animation.show_next_frame(canvas);
                 }
                 MatrixDisplayMessage::ShowSong{ song_name, artist, release_year, cover_image} => {
-                    drop(locked_message);
                     let orientation = orientation_sensor.get_orientation().into();
                     canvas = match (orientation, cover_image) {
                         (DisplayOrientation::Upright, _) | (_, None) => {
@@ -95,7 +114,6 @@ pub fn matrix_display_thread(message: Arc<Mutex<Option<MatrixDisplayMessage>>>) 
                     }
                 }
                 MatrixDisplayMessage::Off => {
-                    drop(locked_message);
                     // Display nothing
                 }
             }
