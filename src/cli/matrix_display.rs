@@ -165,6 +165,10 @@ impl Animation {
         &mut self,
         mut canvas: LedCanvas,
     ) -> LedCanvas {
+        if self.frames.is_empty() {
+            return canvas; // einfach zurückgeben, nichts zu tun
+        }
+        
         let frame = &self.frames[self.index];
         self.index = (self.index + 1) % self.frames.len();
 
@@ -174,8 +178,8 @@ impl Animation {
 
         let (width, height) = canvas.canvas_size();
 
-        let image_width = i32::try_from(image_buffer.width()).unwrap();
-        let image_height = i32::try_from(image_buffer.height()).unwrap();
+        let image_width = i32::try_from(image_buffer.width()).unwrap_or(0);
+        let image_height = i32::try_from(image_buffer.height()).unwrap_or(0);
         let x_offset = (width - image_width) / 2;
         let y_offset = (height - image_height) / 2;
 
