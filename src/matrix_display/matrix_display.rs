@@ -1,5 +1,5 @@
 use std::thread;
-use crate::cli::matrix_display_thread::{matrix_display_thread, MatrixDisplayMessage, SharedMatrixDisplayMessage};
+use crate::matrix_display::matrix_display_thread::{matrix_display_thread, MatrixDisplayMessage, SharedMatrixDisplayMessage};
 
 pub struct MatrixDisplay {
     message: SharedMatrixDisplayMessage,

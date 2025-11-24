@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
 use tempfile::NamedTempFile;
-use crate::cli::orientation_sensor::{OrientationSensor, SensorOrientation};
+use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
 
 const FONT_DATA: &[u8] = include_bytes!("../../external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
 const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!("../../matrix-display/animation16x16.gif");

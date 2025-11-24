@@ -14,7 +14,7 @@ use crate::core::http_thread::http_thread;
 use crate::core::microphone_thread::{microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
-use crate::cli::display_controller::{DisplayController, NoMatchResult};
+use crate::matrix_display::display_controller::{DisplayController, NoMatchResult};
 
 use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};

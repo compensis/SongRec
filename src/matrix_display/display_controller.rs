@@ -1,4 +1,4 @@
-use crate::cli::matrix_display::MatrixDisplay;
+use crate::matrix_display::matrix_display::MatrixDisplay;
 use crate::core::thread_messages::SongRecognizedMessage;
 
 enum TimeoutCounterState {
