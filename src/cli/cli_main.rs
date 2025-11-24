@@ -14,6 +14,8 @@ use crate::core::http_thread::http_thread;
 use crate::core::microphone_thread::{microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
+
+#[cfg(feature = "matrix-display")]
 use crate::matrix_display::display_controller::{DisplayController, NoMatchResult};
 
 use crate::utils::csv_song_history::SongHistoryRecord;
@@ -22,7 +24,6 @@ use crate::utils::thread::spawn_big_thread;
 
 pub enum CLIOutputType {
     SongName,
-    MatrixDisplay,
     JSON,
     CSV,
 }
@@ -83,6 +84,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
 
+    #[cfg(feature = "matrix-display")]
     let mut display_controller = DisplayController::new();
 
     gui_rx.attach(None, move |gui_message| {
@@ -135,7 +137,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 }
             }
             GUIMessage::ErrorMessage(string) => {
-                let mut last_track_borrow = last_track.borrow_mut();
                 if !(string == gettext("No match for this song") && !input_file_name.is_some()) {
                     eprintln!("{} {}", gettext("Error:"), string);
                 }
@@ -143,7 +144,9 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     main_loop_cli.quit();
                     return glib::Continue(false);
                 }
-                if let CLIOutputType::MatrixDisplay = parameters.output_type {
+                #[cfg(feature = "matrix-display")]
+                {
+                    let mut last_track_borrow = last_track.borrow_mut();
                     if string == gettext("No match for this song") {
                         if let NoMatchResult::Reset = display_controller.handle_no_match() {
                             *last_track_borrow = None;
@@ -154,7 +157,8 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             GUIMessage::MicrophoneRecording => {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
-                    if let CLIOutputType::MatrixDisplay = parameters.output_type {
+                    #[cfg(feature = "matrix-display")]
+                    {
                         display_controller.handle_recording_started();
                     }
                 }
@@ -185,20 +189,22 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.serialize(get_song_history_record(message)).unwrap();
                             csv_writer.flush().unwrap();
                         }
-                        CLIOutputType::MatrixDisplay => {
-                            println!("{} - {}", artist_name, song_name);
-                            display_controller.handle_song_recognized(message);
-                        }
-                        #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
-                            println!("{} - {}", artist_name, song_name);
-                        }
-                        #[cfg(feature = "slowprint")]
-                        CLIOutputType::SongName => {
-                            clearscreen::clear().unwrap();
-                            let delay = std::time::Duration::from_millis(100);
-                            slowprint::slow_println(song_name, delay);
-                            slowprint::slow_println(artist_name, delay);
+                            #[cfg(not(feature = "slowprint"))]
+                            {
+                                println!("{} - {}", artist_name, song_name);
+                            }
+                            #[cfg(feature = "matrix-display")]
+                            {
+                                display_controller.handle_song_recognized(message);
+                            }
+                            #[cfg(feature = "slowprint")]
+                            {
+                                clearscreen::clear().unwrap();
+                                let delay = std::time::Duration::from_millis(100);
+                                slowprint::slow_println(song_name, delay);
+                                slowprint::slow_println(artist_name, delay);
+                            }
                         }
                     };
                 }
@@ -208,11 +214,14 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     return glib::Continue(false);
                 }
             }
-            GUIMessage::MicrophoneVolumePercent(percent) => {
-                if percent > 1.0 {
-                    display_controller.handle_microphone_volume_high();
-                } else {
-                    display_controller.handle_microphone_volume_low();
+            GUIMessage::MicrophoneVolumePercent(_percent) => {
+                #[cfg(feature = "matrix-display")]
+                {
+                    if _percent > 1.0 {
+                        display_controller.handle_microphone_volume_high();
+                    } else {
+                        display_controller.handle_microphone_volume_low();
+                    }
                 }
             }
             #[cfg(feature = "gui")]

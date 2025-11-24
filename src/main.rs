@@ -27,6 +27,7 @@ mod cli {
     pub mod cli_main;
 }
 
+#[cfg(feature = "matrix-display")]
 mod matrix_display {   
     mod matrix_display;
     pub mod display_controller;
@@ -380,12 +381,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 recognize_once: false,
                 audio_device: None,
                 input_file: None,
-                output_type: if cfg!(feature = "matrix-display") {
-                    CLIOutputType::MatrixDisplay
-                }
-                else {
-                    CLIOutputType::SongName
-                }
+                output_type: CLIOutputType::SongName
             })?;
         },
         _ => unreachable!()
