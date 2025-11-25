@@ -114,7 +114,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                             show_info(song_name, artist, release_year, &font, canvas)
                         },
                         (orientation, Some(image_data)) => {
-                            show_image(image_data, &orientation, canvas)
+                            show_image(&image_data, &orientation, canvas)
                         }
                     }
                 }
@@ -284,12 +284,12 @@ fn show_info(
 }
 
 fn show_image(
-    image_data: &Vec<u8>,
+    image_data: &[u8],
     orientation: &DisplayOrientation,
     mut canvas: LedCanvas,
 ) -> LedCanvas {
     let (width, height) = canvas.canvas_size();
-    let cursor = Cursor::new(&image_data);
+    let cursor = Cursor::new(image_data);
     let dynamic_image = ImageReader::new(cursor)
         .with_guessed_format().unwrap()
         .decode().unwrap()
