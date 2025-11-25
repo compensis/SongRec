@@ -13,7 +13,7 @@ const FONT_DATA: &[u8] = include_bytes!("../../external/rust-rpi-rgb-led-matrix/
 const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!("../../matrix-display/animation16x16.gif");
 
 pub enum MatrixDisplayMessage {
-    ShwoAnimation,
+    ShowAnimation,
     ShowSong { 
         song_name: String,
         artist: String,
@@ -102,9 +102,9 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
         if let Some(ref message) = shared_message.take() {
             canvas.clear();
             match message {
-                MatrixDisplayMessage::ShwoAnimation => {
+                MatrixDisplayMessage::ShowAnimation => {
                     // Keep showing anaimation also during the next loop iteration
-                    shared_message.set(MatrixDisplayMessage::ShwoAnimation);
+                    shared_message.set(MatrixDisplayMessage::ShowAnimation);
                     canvas = animation.show_next_frame(canvas);
                 }
                 MatrixDisplayMessage::ShowSong{ song_name, artist, release_year, cover_image} => {

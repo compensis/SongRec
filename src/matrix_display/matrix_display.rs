@@ -20,7 +20,7 @@ impl MatrixDisplay {
     }
 
     pub fn init(self: &mut Self) {
-        self.message.set(MatrixDisplayMessage::ShwoAnimation);
+        self.message.set(MatrixDisplayMessage::ShowAnimation);
     }
 
     pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
