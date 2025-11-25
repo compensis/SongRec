@@ -14,7 +14,6 @@ const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!("../../matrix-display/animati
 
 pub enum MatrixDisplayMessage {
     ShwoAnimation,
-    #[allow(dead_code)]
     ShowSong { 
         song_name: String,
         artist: String,
