@@ -9,8 +9,14 @@ use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, 
 use tempfile::NamedTempFile;
 use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
 
-const FONT_DATA: &[u8] = include_bytes!("../../external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf");
-const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!("../../matrix-display/animation16x16.gif");
+const FONT_DATA: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/external/rust-rpi-rgb-led-matrix/rpi-led-matrix-sys/cpp-library/fonts/Grand9K-Pixel.bdf"
+));
+const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/animation16x16.gif"
+));
 
 pub enum MatrixDisplayMessage {
     ShowAnimation,
