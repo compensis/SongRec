@@ -11,9 +11,9 @@ impl MatrixDisplay {
 
         let shared_message = SharedMatrixDisplayMessage::new();
 
-        let message_stread = shared_message.clone();
+        let shared_message_for_thread = shared_message.clone();
         thread::spawn(move || {
-            matrix_display_thread(message_stread);
+            matrix_display_thread(shared_message_for_thread);
         });
 
         Self { message: shared_message }
