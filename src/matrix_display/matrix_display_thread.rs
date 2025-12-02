@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Cursor;
 use std::thread;
@@ -188,7 +189,18 @@ impl Animation {
 /// - If the string has no spaces and at least two characters, the last character is replaced
 ///   with an ellipsis.
 /// - Strings with fewer than 2 characters remain unchanged.
-fn replace_last_word_with_ellipsis(s: &mut String) {
+/// 
+/// # Parameter
+/// - `s: &mut Cow<'_, str>`: 
+///   The function takes a mutable reference to a [`Cow`] (Clone-on-Write) string to allow
+///   efficient modification:
+///   - If the input string is borrowed (`&str`), it will be cloned only when a mutation is required,
+///     avoiding unnecessary allocations if no change is needed.
+///   - If the input string is already owned (`String`), it can be modified in place without cloning.
+fn replace_last_word_with_ellipsis(s: &mut Cow<'_, str>) {
+    // Clone-on-write: clones only if s is Borrowed
+    let s = s.to_mut();
+
     if let Some(pos) = s.rfind(' ') {
         // Found a space: truncate everything after the last space
         s.truncate(pos);
@@ -232,25 +244,28 @@ fn draw_year(
     canvas
 }
 
-fn show_info(
-    name: &str,
-    artist: &str,
+fn show_info<'a>(
+    name: &'a str,
+    artist: &'a str,
     release_year: &Option<String>,
     font: &LedFont,
     mut canvas: LedCanvas,
 ) -> LedCanvas {
     let (canvas_width, canvas_height) = canvas.canvas_size();
-    let mut name = name.to_owned();
-    let mut artist = artist.to_owned();
 
-    let base_options =
-        TextDrawOptions::new().layout(TextLayout::Wrapped { line_width: canvas_width });
+    // Use Cow instead of immediately cloning; clone-on-write only if truncation is needed
+    let mut name: Cow<'a, str> = Cow::Borrowed(name);
+    let mut artist: Cow<'a, str> = Cow::Borrowed(artist);
+
+    let base_options = TextDrawOptions::new().layout(TextLayout::Wrapped {
+        line_width: canvas_width,
+    });
 
     // Determine initial heights
     let mut name_height = canvas.draw_text(font, &name, &base_options);
     let mut artist_height = canvas.draw_text(font, &artist, &base_options);
 
-    // Shorten strings until they fit
+    // Shorten strings until they fit within the canvas
     while name_height + artist_height > canvas_height {
         if name_height > artist_height {
             replace_last_word_with_ellipsis(&mut name);
