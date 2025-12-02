@@ -1,12 +1,10 @@
 use std::convert::TryFrom;
 use std::io::Cursor;
-use std::io::Write;
 use std::thread;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
-use tempfile::NamedTempFile;
 use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
 
 const FONT_DATA: &[u8] = include_bytes!(concat!(
@@ -96,11 +94,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap();
 
     let mut canvas = matrix.offscreen_canvas();
-
-    // LedFont::new needs a real file, so create a temporary file from the data
-    let mut temp_font_file = NamedTempFile::new().unwrap();
-    let _ = temp_font_file.write(FONT_DATA);
-    let font = LedFont::new(temp_font_file.path()).unwrap();
+    let font = LedFont::new_from_buffer(FONT_DATA).unwrap();
 
     let mut animation = Animation::new(ANIMATION_IMAGE_DATA);
     
