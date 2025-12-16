@@ -8,12 +8,13 @@ pub struct MatrixDisplay {
 impl MatrixDisplay {
 
     pub fn new() -> Self {
-
         let shared_message = SharedMatrixDisplayMessage::new();
 
-        let shared_message_for_thread = shared_message.clone();
-        thread::spawn(move || {
-            matrix_display_thread(shared_message_for_thread);
+        thread::spawn({
+            let shared_message = shared_message.share();
+            move || {
+                matrix_display_thread(shared_message);
+            }
         });
 
         Self { message: shared_message }

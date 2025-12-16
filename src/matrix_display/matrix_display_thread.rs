@@ -28,7 +28,6 @@ pub enum MatrixDisplayMessage {
     Off,
 }
 
-#[derive(Clone)]
 pub struct SharedMatrixDisplayMessage {
     message: Arc<Mutex<Option<MatrixDisplayMessage>>>,
 }
@@ -39,6 +38,13 @@ impl SharedMatrixDisplayMessage {
             message: Arc::new(Mutex::new(None))
         }
     }
+
+    pub fn share(&self) -> Self {
+        Self {
+            message: Arc::clone(&self.message)
+        }
+    }
+
 
     pub fn set(&self, message: MatrixDisplayMessage) {
         let mut locked_message = self.message.lock().unwrap();
