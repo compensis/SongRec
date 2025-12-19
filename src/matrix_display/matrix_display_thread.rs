@@ -114,7 +114,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                 MatrixDisplayMessage::ShowAnimation => {
                     // Keep showing anaimation also during the next loop iteration
                     shared_message.set(MatrixDisplayMessage::ShowAnimation);
-                    canvas = animation.show_next_frame(canvas);
+                    animation.show_next_frame(&mut canvas);
                 }
                 MatrixDisplayMessage::ShowSong {
                     song_name,
@@ -123,12 +123,12 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                     cover_image,
                 } => {
                     let orientation = orientation_sensor.get_orientation().into();
-                    canvas = match (orientation, cover_image) {
+                    match (orientation, cover_image) {
                         (DisplayOrientation::Upright, _) | (_, None) => {
-                            show_info(song_name, artist, release_year, &font, canvas)
+                            show_info(song_name, artist, release_year, &font, &mut canvas)
                         }
                         (orientation, Some(image_data)) => {
-                            show_image(&image_data, &orientation, canvas)
+                            show_image(&image_data, &orientation, &mut canvas);
                         }
                     }
                 }
@@ -156,9 +156,9 @@ impl Animation {
         Self { frames, index: 0 }
     }
 
-    fn show_next_frame(&mut self, mut canvas: LedCanvas) -> LedCanvas {
+    fn show_next_frame(&mut self, canvas: &mut LedCanvas) {
         if self.frames.is_empty() {
-            return canvas; // einfach zurückgeben, nichts zu tun
+            return; // nothing to do
         }
 
         let frame = &self.frames[self.index];
@@ -182,8 +182,6 @@ impl Animation {
         }
 
         thread::sleep(Duration::from_millis(delay_ms));
-
-        canvas
     }
 }
 
@@ -227,7 +225,7 @@ fn replace_last_word_with_ellipsis(s: &mut Cow<'_, str>) {
     s.push('…');
 }
 
-fn draw_year(year: &str, font: &LedFont, mut canvas: LedCanvas) -> LedCanvas {
+fn draw_year(year: &str, font: &LedFont, canvas: &mut LedCanvas) {
     // Only the last two digits of the year
     let year = &year[year.len() - 2..];
 
@@ -242,8 +240,6 @@ fn draw_year(year: &str, font: &LedFont, mut canvas: LedCanvas) -> LedCanvas {
     let y = font.height().unwrap_or(0) - 1;
     let options = options.position(x, y);
     canvas.draw_text(font, year, &options);
-
-    canvas
 }
 
 fn show_info<'a>(
@@ -251,8 +247,8 @@ fn show_info<'a>(
     artist: &'a str,
     release_year: &Option<String>,
     font: &LedFont,
-    mut canvas: LedCanvas,
-) -> LedCanvas {
+    canvas: &mut LedCanvas,
+) {
     let (canvas_width, canvas_height) = canvas.canvas_size();
 
     // Use Cow instead of immediately cloning; clone-on-write only if truncation is needed
@@ -293,18 +289,12 @@ fn show_info<'a>(
     // Optional: draw year at the top
     if let Some(year) = release_year {
         if name_y >= font.height().unwrap_or(0) {
-            canvas = draw_year(year, font, canvas);
+            draw_year(year, font, canvas);
         }
     }
-
-    canvas
 }
 
-fn show_image(
-    image_data: &[u8],
-    orientation: &DisplayOrientation,
-    mut canvas: LedCanvas,
-) -> LedCanvas {
+fn show_image(image_data: &[u8], orientation: &DisplayOrientation, canvas: &mut LedCanvas) {
     let (width, height) = canvas.canvas_size();
     let cursor = Cursor::new(image_data);
     let dynamic_image = ImageReader::new(cursor)
@@ -329,5 +319,4 @@ fn show_image(
         let color = LedColor { red, green, blue };
         canvas.set(x as i32, y as i32, &color);
     }
-    canvas
 }
