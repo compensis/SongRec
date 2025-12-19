@@ -26,8 +26,8 @@ impl MatrixDisplay {
 
     pub fn show_song(self: &mut Self, song_name: &str, artist: &str, release_year: &Option<String>, cover_image: &Option<Vec<u8>>) {
         self.message.set(MatrixDisplayMessage::ShowSong{
-            song_name: song_name.to_string(),
-            artist: artist.to_string(),
+            song_name: song_name.to_owned(),
+            artist: artist.to_owned(),
             release_year: release_year.clone(),
             cover_image: cover_image.clone(),
         });
