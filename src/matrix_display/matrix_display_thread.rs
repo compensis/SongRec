@@ -128,7 +128,11 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                             show_info(song_name, artist, release_year, &font, &mut canvas)
                         }
                         (orientation, Some(image_data)) => {
-                            show_image(&image_data, &orientation, &mut canvas);
+                            if let Err(e) = show_image(&image_data, &orientation, &mut canvas) {
+                                let error_message = format!("Error: {}", e);
+                                eprintln!("{}", error_message);
+                                show_info(&error_message, "", &None, &font, &mut canvas);
+                            }
                         }
                     }
                 }
@@ -293,17 +297,18 @@ fn show_info<'a>(
             draw_year(year, font, canvas);
         }
     }
-
 }
 
-fn show_image(image_data: &[u8], orientation: &DisplayOrientation, canvas: &mut LedCanvas) {
+fn show_image(
+    image_data: &[u8],
+    orientation: &DisplayOrientation,
+    canvas: &mut LedCanvas,
+) -> Result<(), image::ImageError> {
     let (width, height) = canvas.canvas_size();
     let cursor = Cursor::new(image_data);
     let dynamic_image = ImageReader::new(cursor)
-        .with_guessed_format()
-        .unwrap()
-        .decode()
-        .unwrap()
+        .with_guessed_format()?
+        .decode()?
         .resize_exact(
             width as u32,
             height as u32,
@@ -321,4 +326,5 @@ fn show_image(image_data: &[u8], orientation: &DisplayOrientation, canvas: &mut 
         let color = LedColor { red, green, blue };
         canvas.set(x as i32, y as i32, &color);
     }
+    Ok(())
 }
