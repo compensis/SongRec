@@ -1,5 +1,5 @@
-use crate::matrix_display::matrix_display::MatrixDisplay;
 use crate::core::thread_messages::SongRecognizedMessage;
+use crate::matrix_display::matrix_display::MatrixDisplay;
 
 enum TimeoutCounterState {
     Stopped,
@@ -21,7 +21,7 @@ impl TimeoutCounter {
 
     fn start(self: &mut Self) -> bool {
         let restarted = match self.state {
-            TimeoutCounterState::Stopped  => true,
+            TimeoutCounterState::Stopped => true,
             _ => false,
         };
         self.state = TimeoutCounterState::Countdown(self.timeout);

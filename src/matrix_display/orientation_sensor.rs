@@ -1,5 +1,5 @@
+use linux_embedded_hal::{Delay, I2cdev};
 use mpu6050::Mpu6050;
-use linux_embedded_hal::{I2cdev, Delay};
 
 #[derive(Debug)]
 pub enum SensorOrientation {
@@ -23,7 +23,7 @@ impl OrientationSensor {
         let mut mpu = Mpu6050::new(i2c);
         mpu.init(&mut Delay).unwrap();
 
-        Self { mpu}
+        Self { mpu }
     }
 
     pub fn get_orientation(&mut self) -> SensorOrientation {

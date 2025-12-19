@@ -1,12 +1,15 @@
+use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
+use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
+use rpi_led_matrix::{
+    LedCanvas, LedColor, LedFont, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions,
+    TextLayout,
+};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Cursor;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use std::sync::{Arc, Mutex};
-use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
-use rpi_led_matrix::{LedFont, LedColor, LedCanvas, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions, TextLayout};
-use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
 
 const FONT_DATA: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -19,7 +22,7 @@ const ANIMATION_IMAGE_DATA: &[u8] = include_bytes!(concat!(
 
 pub enum MatrixDisplayMessage {
     ShowAnimation,
-    ShowSong { 
+    ShowSong {
         song_name: String,
         artist: String,
         release_year: Option<String>,
@@ -35,16 +38,15 @@ pub struct SharedMatrixDisplayMessage {
 impl SharedMatrixDisplayMessage {
     pub fn new() -> Self {
         Self {
-            message: Arc::new(Mutex::new(None))
+            message: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn share(&self) -> Self {
         Self {
-            message: Arc::clone(&self.message)
+            message: Arc::clone(&self.message),
         }
     }
-
 
     pub fn set(&self, message: MatrixDisplayMessage) {
         let mut locked_message = self.message.lock().unwrap();
@@ -104,7 +106,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let font = LedFont::new_from_buffer(FONT_DATA).unwrap();
 
     let mut animation = Animation::new(ANIMATION_IMAGE_DATA);
-    
+
     loop {
         if let Some(ref message) = shared_message.take() {
             canvas.clear();
@@ -114,12 +116,17 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                     shared_message.set(MatrixDisplayMessage::ShowAnimation);
                     canvas = animation.show_next_frame(canvas);
                 }
-                MatrixDisplayMessage::ShowSong{ song_name, artist, release_year, cover_image} => {
+                MatrixDisplayMessage::ShowSong {
+                    song_name,
+                    artist,
+                    release_year,
+                    cover_image,
+                } => {
                     let orientation = orientation_sensor.get_orientation().into();
                     canvas = match (orientation, cover_image) {
                         (DisplayOrientation::Upright, _) | (_, None) => {
                             show_info(song_name, artist, release_year, &font, canvas)
-                        },
+                        }
                         (orientation, Some(image_data)) => {
                             show_image(&image_data, &orientation, canvas)
                         }
@@ -131,14 +138,13 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
             }
             canvas = matrix.swap(canvas);
         }
-    };
+    }
 }
 
 struct Animation {
     frames: Vec<image::Frame>,
     index: usize,
 }
-
 
 impl Animation {
     fn new(data: &[u8]) -> Self {
@@ -147,20 +153,14 @@ impl Animation {
 
         let frames = decoder.into_frames();
         let frames = frames.collect_frames().unwrap();
-        Self {
-            frames,
-            index: 0,
-        }
+        Self { frames, index: 0 }
     }
 
-    fn show_next_frame(
-        &mut self,
-        mut canvas: LedCanvas,
-    ) -> LedCanvas {
+    fn show_next_frame(&mut self, mut canvas: LedCanvas) -> LedCanvas {
         if self.frames.is_empty() {
             return canvas; // einfach zurückgeben, nichts zu tun
         }
-        
+
         let frame = &self.frames[self.index];
         self.index = (self.index + 1) % self.frames.len();
 
@@ -188,16 +188,16 @@ impl Animation {
 }
 
 /// Replaces the last word in the given string with an ellipsis ('…').
-/// 
+///
 /// Behavior:
 /// - If the string contains at least one space, everything after the last space is removed,
 ///   and an ellipsis is appended.
 /// - If the string has no spaces and at least two characters, the last character is replaced
 ///   with an ellipsis.
 /// - Strings with fewer than 2 characters remain unchanged.
-/// 
+///
 /// # Parameter
-/// - `s: &mut Cow<'_, str>`: 
+/// - `s: &mut Cow<'_, str>`:
 ///   The function takes a mutable reference to a [`Cow`] (Clone-on-Write) string to allow
 ///   efficient modification:
 ///   - If the input string is borrowed (`&str`), it will be cloned only when a mutation is required,
@@ -227,13 +227,9 @@ fn replace_last_word_with_ellipsis(s: &mut Cow<'_, str>) {
     s.push('…');
 }
 
-fn draw_year(
-    year: &str, 
-    font: &LedFont,
-    mut canvas: LedCanvas
-) -> LedCanvas {
+fn draw_year(year: &str, font: &LedFont, mut canvas: LedCanvas) -> LedCanvas {
     // Only the last two digits of the year
-    let year = &year[year.len()-2..];
+    let year = &year[year.len() - 2..];
 
     let (canvas_width, _canvas_height) = canvas.canvas_size();
 
@@ -312,11 +308,13 @@ fn show_image(
     let (width, height) = canvas.canvas_size();
     let cursor = Cursor::new(image_data);
     let dynamic_image = ImageReader::new(cursor)
-        .with_guessed_format().unwrap()
-        .decode().unwrap()
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .unwrap()
         .resize_exact(
-            width as u32, 
-            height as u32, 
+            width as u32,
+            height as u32,
             image::imageops::FilterType::Lanczos3,
         );
     let rotated_image = match orientation {
