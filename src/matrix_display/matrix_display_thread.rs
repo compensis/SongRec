@@ -287,11 +287,13 @@ fn show_info<'a>(
     canvas.draw_text(font, &name, &name_options);
 
     // Optional: draw year at the top
-    if let Some(year) = release_year {
-        if name_y >= font.height().unwrap_or(0) {
+    if let (Some(year), Ok(height)) = (release_year, font.height()) {
+        // Only if there is enough space
+        if name_y >= height {
             draw_year(year, font, canvas);
         }
     }
+
 }
 
 fn show_image(image_data: &[u8], orientation: &DisplayOrientation, canvas: &mut LedCanvas) {
