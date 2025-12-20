@@ -100,10 +100,16 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
 
     runtime_options.set_gpio_slowdown(3);
 
-    let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap();
+    let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap_or_else(|e| {
+        println!("Error initializing the matrix display: {}", e);
+        std::process::exit(1);
+    });
 
     let mut canvas = matrix.offscreen_canvas();
-    let font = LedFont::new_from_buffer(FONT_DATA).unwrap();
+    let font = LedFont::new_from_buffer(FONT_DATA).unwrap_or_else(|e| {
+        println!("Error loading matrix display font: {}", e);
+        std::process::exit(1);
+    });
 
     let mut animation = Animation::new(ANIMATION_IMAGE_DATA).unwrap_or_else(|e| {
         println!("Error loading animation image data: {}", e);
