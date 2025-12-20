@@ -105,7 +105,10 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let mut canvas = matrix.offscreen_canvas();
     let font = LedFont::new_from_buffer(FONT_DATA).unwrap();
 
-    let mut animation = Animation::new(ANIMATION_IMAGE_DATA);
+    let mut animation = Animation::new(ANIMATION_IMAGE_DATA).unwrap_or_else(|e| {
+        println!("Error loading animation image data: {}", e);
+        std::process::exit(1);
+    });
 
     loop {
         if let Some(ref message) = shared_message.take() {
@@ -151,13 +154,13 @@ struct Animation {
 }
 
 impl Animation {
-    fn new(data: &[u8]) -> Self {
+    fn new(data: &[u8]) -> Result<Self, image::ImageError> {
         let cursor = Cursor::new(data);
-        let decoder = GifDecoder::new(cursor).unwrap();
+        let decoder = GifDecoder::new(cursor)?;
 
         let frames = decoder.into_frames();
-        let frames = frames.collect_frames().unwrap();
-        Self { frames, index: 0 }
+        let frames = frames.collect_frames()?;
+        Ok(Self { frames, index: 0 })
     }
 
     fn show_next_frame(&mut self, canvas: &mut LedCanvas) {
