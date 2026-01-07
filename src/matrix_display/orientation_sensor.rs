@@ -1,5 +1,6 @@
+use linux_embedded_hal::i2cdev::linux::LinuxI2CError;
 use linux_embedded_hal::{Delay, I2cdev};
-use mpu6050::Mpu6050;
+use mpu6050::{Mpu6050, Mpu6050Error};
 
 #[derive(Debug)]
 pub enum SensorOrientation {
@@ -11,27 +12,30 @@ pub enum SensorOrientation {
     ZDown,
 }
 
+pub type SensorError = Mpu6050Error<LinuxI2CError>;
+
 pub struct OrientationSensor {
     mpu: Mpu6050<I2cdev>,
 }
 
 impl OrientationSensor {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, SensorError> {
         let i2c = I2cdev::new("/dev/i2c-1")
-            .or_else(|_| I2cdev::new("/dev/i2c-20")).unwrap();
+            .or_else(|_| I2cdev::new("/dev/i2c-20"))
+            .map_err(Mpu6050Error::I2c)?;
 
         let mut mpu = Mpu6050::new(i2c);
-        mpu.init(&mut Delay).unwrap();
+        mpu.init(&mut Delay)?;
 
-        Self { mpu }
+        Ok(Self { mpu })
     }
 
-    pub fn get_orientation(&mut self) -> SensorOrientation {
-        let acc = self.mpu.get_acc().unwrap();
+    pub fn get_orientation(&mut self) -> Result<SensorOrientation, SensorError> {
+        let acc = self.mpu.get_acc()?;
 
         let (x_abs, y_abs, z_abs) = (acc.x.abs(), acc.y.abs(), acc.z.abs());
 
-        if z_abs > x_abs && z_abs > y_abs {
+        let orientation = if z_abs > x_abs && z_abs > y_abs {
             if acc.z > 0.0 {
                 SensorOrientation::ZTop
             } else {
@@ -49,6 +53,8 @@ impl OrientationSensor {
             } else {
                 SensorOrientation::YDown
             }
-        }
+        };
+
+        Ok(orientation)
     }
 }

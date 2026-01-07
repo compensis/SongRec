@@ -1,4 +1,6 @@
-use crate::matrix_display::orientation_sensor::{OrientationSensor, SensorOrientation};
+use crate::matrix_display::orientation_sensor::{
+    OrientationSensor, SensorError, SensorOrientation,
+};
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
 use rpi_led_matrix::{
     LedCanvas, LedColor, LedFont, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions,
@@ -79,13 +81,37 @@ impl From<SensorOrientation> for DisplayOrientation {
     }
 }
 
+#[derive(Debug)]
+enum ReadOrientationError<'a> {
+    InitFailed(&'a SensorError),
+    ReadFailed(SensorError),
+}
+
+fn read_orientation<'a>(
+    orientation_sensor: &'a mut Result<OrientationSensor, SensorError>,
+) -> Result<SensorOrientation, ReadOrientationError<'a>> {
+    orientation_sensor
+        .as_mut()
+        .map_err(|e| ReadOrientationError::InitFailed(e))?
+        .get_orientation()
+        .map_err(ReadOrientationError::ReadFailed)
+}
+
 pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let mut orientation_sensor = OrientationSensor::new();
 
-    let orientation = orientation_sensor.get_orientation();
-    println!("Senor Orientation: {:?}", orientation);
+    let orientation = read_orientation(&mut orientation_sensor);
+    match orientation {
+        Ok(ref orientation) => println!("Senor Orientation: {:?}", orientation),
+        Err(ReadOrientationError::InitFailed(e)) => {
+            println!("Error initializing orientation sensor: {:?}", e)
+        }
+        Err(ReadOrientationError::ReadFailed(ref e)) => {
+            println!("Error reading orientation sensor: {:?}", e)
+        }
+    }
 
-    let orientation: DisplayOrientation = orientation_sensor.get_orientation().into();
+    let orientation = orientation.map(DisplayOrientation::from);
     println!("Display Orientation: {:?}", orientation);
 
     let mut options = LedMatrixOptions::new();
@@ -131,12 +157,13 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                     release_year,
                     cover_image,
                 } => {
-                    let orientation = orientation_sensor.get_orientation().into();
+                    let orientation =
+                        read_orientation(&mut orientation_sensor).map(DisplayOrientation::from);
                     match (orientation, cover_image) {
-                        (DisplayOrientation::Upright, _) | (_, None) => {
+                        (Ok(DisplayOrientation::Upright), _) | (Err(_), _) | (_, None) => {
                             show_info(song_name, artist, release_year, &font, &mut canvas)
                         }
-                        (orientation, Some(image_data)) => {
+                        (Ok(orientation), Some(image_data)) => {
                             if let Err(e) = show_image(&image_data, &orientation, &mut canvas) {
                                 let error_message = format!("Error: {}", e);
                                 eprintln!("{}", error_message);
