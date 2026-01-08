@@ -74,21 +74,21 @@ macro_rules! base_app {
                 .about(gettext("Run as a command-line program listening the microphone and printing recognized songs to stdout, exposing current song info via MPRIS").as_str())
                 .arg(
                     Arg::with_name("audio-device")
-                        .short("d")
+                        .short('d')
                         .long("audio-device")
                         .takes_value(true)
                         .help(gettext("Specify the audio device to use").as_str())
                 )
                 .arg(
                     Arg::with_name("json")
-                        .short("j")
+                        .short('j')
                         .long("json")
                         .conflicts_with("csv")
                         .help(gettext("Enable printing full song info in JSON").as_str())
                 )
                 .arg(
                     Arg::with_name("csv")
-                        .short("c")
+                        .short('c')
                         .long("csv")
                         .help(gettext("Enable printing full song info in the CSV format").as_str())
                 )
@@ -103,21 +103,21 @@ macro_rules! base_app {
                 .about(gettext("Recognize one song from a sound file or microphone and print its info.").as_str())
                 .arg(
                     Arg::with_name("audio-device")
-                        .short("d")
+                        .short('d')
                         .long("audio-device")
                         .takes_value(true)
                         .help(gettext("Specify the audio device to use").as_str())
                 )
                 .arg(
                     Arg::with_name("json")
-                        .short("j")
+                        .short('j')
                         .long("json")
                         .conflicts_with("csv")
                         .help(gettext("Enable printing full song info in JSON").as_str())
                 )
                 .arg(
                     Arg::with_name("csv")
-                        .short("c")
+                        .short('c')
                         .long("csv")
                         .help(gettext("Enable printing full song info in the CSV format").as_str())
                 )
@@ -141,7 +141,7 @@ macro_rules! base_app {
                 .about(gettext("Recognize a currently playing song using the microphone and print obtained information to the standard output").as_str())
                 .arg(
                     Arg::with_name("audio-device")
-                        .short("d")
+                        .short('d')
                         .long("audio-device")
                         .takes_value(true)
                         .help(gettext("Specify the audio device to use").as_str())
@@ -177,8 +177,8 @@ macro_rules! base_app {
                     Arg::with_name("output_file")
                         .required(false)
                         .help(gettext("File path of the .WAV file to write tones to, or nothing to play back the sound instantly.").as_str())
-                )
         )
+    )
     };
 }
 
