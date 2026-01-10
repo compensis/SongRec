@@ -422,6 +422,7 @@ dependencies = [
  "bitflags 1.3.2",
  "clap_lex",
  "indexmap 1.7.0",
+ "once_cell",
  "strsim 0.10.0",
  "termcolor",
  "textwrap",
@@ -3068,6 +3069,7 @@ dependencies = [
 name = "rpi-led-matrix"
 version = "0.2.0"
 dependencies = [
+ "clap",
  "embedded-graphics-core",
  "libc",
  "rpi-led-matrix-sys",

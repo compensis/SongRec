@@ -60,6 +60,9 @@ use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
 
+#[cfg(feature="matrix-display")]
+use rpi_led_matrix::args;
+
 //use std::io::Write;
 //use std::process::Command;
 //use std::process::Stdio;
@@ -222,7 +225,12 @@ macro_rules! app {
     () => { gui_app!() };
 }
 
-#[cfg(not(feature="gui"))]
+#[cfg(feature="matrix-display")]
+macro_rules! app {
+    () => {  args::add_matrix_args( base_app!() ) };
+}
+
+#[cfg(not(any(feature = "gui", feature = "matrix-display")))]
 macro_rules! app {
     () => { base_app!() };
 }

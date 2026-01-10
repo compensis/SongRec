@@ -1,11 +1,10 @@
 use crate::matrix_display::orientation_sensor::{
     OrientationSensor, SensorError, SensorOrientation,
 };
+use clap::App;
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
-use rpi_led_matrix::{
-    LedCanvas, LedColor, LedFont, LedMatrix, LedMatrixOptions, LedRuntimeOptions, TextDrawOptions,
-    TextLayout,
-};
+use rpi_led_matrix::args;
+use rpi_led_matrix::{LedCanvas, LedColor, LedFont, LedMatrix, TextDrawOptions, TextLayout};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Cursor;
@@ -114,17 +113,9 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     let orientation = orientation.map(DisplayOrientation::from);
     println!("Display Orientation: {:?}", orientation);
 
-    let mut options = LedMatrixOptions::new();
-    let mut runtime_options = LedRuntimeOptions::new();
-
-    options.set_hardware_mapping("adafruit-hat-pwm");
-    options.set_rows(64);
-    options.set_cols(64);
-    options.set_pwm_lsb_nanoseconds(130);
-    options.set_pixel_mapper_config("Rotate:180");
-    let _ = options.set_brightness(75);
-
-    runtime_options.set_gpio_slowdown(3);
+    // Read matrix configuration from the program's CLI arguments
+    let arg_matches = args::add_matrix_args(App::new("")).get_matches();
+    let (options, runtime_options) = args::matrix_options_from_args(&arg_matches);
 
     let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap_or_else(|e| {
         println!("Error initializing the matrix display: {}", e);
