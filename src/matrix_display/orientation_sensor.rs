@@ -33,26 +33,15 @@ impl OrientationSensor {
     pub fn get_orientation(&mut self) -> Result<SensorOrientation, SensorError> {
         let acc = self.mpu.get_acc()?;
 
-        let (x_abs, y_abs, z_abs) = (acc.x.abs(), acc.y.abs(), acc.z.abs());
+        let maximum = acc.amax();
 
-        let orientation = if z_abs > x_abs && z_abs > y_abs {
-            if acc.z > 0.0 {
-                SensorOrientation::ZTop
-            } else {
-                SensorOrientation::ZDown
-            }
-        } else if x_abs > y_abs {
-            if acc.x > 0.0 {
-                SensorOrientation::XTop
-            } else {
-                SensorOrientation::XDown
-            }
-        } else {
-            if acc.y > 0.0 {
-                SensorOrientation::YTop
-            } else {
-                SensorOrientation::YDown
-            }
+        let orientation = match maximum {
+            m if m == acc.z  => SensorOrientation::ZTop,
+            m if m == -acc.z => SensorOrientation::ZDown,
+            m if m == acc.x  => SensorOrientation::XTop,
+            m if m == -acc.x => SensorOrientation::XDown,
+            m if m == acc.y  => SensorOrientation::YTop,
+            _                => SensorOrientation::YDown,
         };
 
         Ok(orientation)
