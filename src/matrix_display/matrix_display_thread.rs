@@ -1,9 +1,11 @@
+use crate::base_app;
 use crate::matrix_display::orientation_sensor::{
     OrientationSensor, SensorError, SensorOrientation,
 };
-use clap::App;
+use clap::{App, Arg};
+use gettextrs::gettext;
 use image::{codecs::gif::GifDecoder, AnimationDecoder, ImageReader};
-use rpi_led_matrix::args;
+use rpi_led_matrix::args::matrix_options_from_args;
 use rpi_led_matrix::{LedCanvas, LedColor, LedFont, LedMatrix, TextDrawOptions, TextLayout};
 use std::borrow::Cow;
 use std::convert::TryFrom;
@@ -114,8 +116,12 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     println!("Display Orientation: {:?}", orientation);
 
     // Read matrix configuration from the program's CLI arguments
-    let arg_matches = args::add_matrix_args(App::new("")).get_matches();
-    let (options, runtime_options) = args::matrix_options_from_args(&arg_matches);
+    let args = crate::app!().get_matches();
+    let subcommand_args = args.subcommand_matches("matrix-display").unwrap_or_else(| | {
+        println!("Error: expected CLI subcommand 'matrix-display'");
+        std::process::exit(1);
+    });
+    let (options, runtime_options) = matrix_options_from_args(&subcommand_args);
 
     let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap_or_else(|e| {
         println!("Error initializing the matrix display: {}", e);

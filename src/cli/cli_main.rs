@@ -26,6 +26,15 @@ pub enum CLIOutputType {
     SongName,
     JSON,
     CSV,
+    #[cfg(feature = "matrix-display")]
+    MatrixDisplay(DisplayController),
+}
+
+#[cfg(feature = "matrix-display")]
+impl CLIOutputType {
+    pub fn matrix_display() -> Self {
+        Self::MatrixDisplay(DisplayController::new())
+    }
 }
 
 pub struct CLIParameters {
@@ -36,7 +45,7 @@ pub struct CLIParameters {
     pub output_type: CLIOutputType,
 }
 
-pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
+pub fn cli_main(mut parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     glib::MainContext::default().acquire();
     let main_loop = Arc::new(glib::MainLoop::new(None, false));
 
@@ -83,9 +92,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     }
 
     let mut csv_writer = csv::Writer::from_writer(std::io::stdout());
-
-    #[cfg(feature = "matrix-display")]
-    let mut display_controller = DisplayController::new();
 
     gui_rx.attach(None, move |gui_message| {
         match gui_message {
@@ -145,7 +151,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     return glib::Continue(false);
                 }
                 #[cfg(feature = "matrix-display")]
-                {
+                if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
                     let mut last_track_borrow = last_track.borrow_mut();
                     if string == gettext("No match for this song") {
                         if let NoMatchResult::Reset = display_controller.handle_no_match() {
@@ -158,7 +164,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
                     #[cfg(feature = "matrix-display")]
-                    {
+                    if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
                         display_controller.handle_recording_started();
                     }
                 }
@@ -181,7 +187,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     #[cfg(feature = "textwrap")]
                     let artist_name = &textwrap::fill(&artist_name, textwrap::termwidth());
 
-                    match parameters.output_type {
+                    match &mut parameters.output_type {
                         CLIOutputType::JSON => {
                             println!("{}", message.shazam_json);
                         }
@@ -194,10 +200,6 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             {
                                 println!("{} - {}", artist_name, song_name);
                             }
-                            #[cfg(feature = "matrix-display")]
-                            {
-                                display_controller.handle_song_recognized(message);
-                            }
                             #[cfg(feature = "slowprint")]
                             {
                                 clearscreen::clear().unwrap();
@@ -205,6 +207,10 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                                 slowprint::slow_println(song_name, delay);
                                 slowprint::slow_println(artist_name, delay);
                             }
+                        }
+                        #[cfg(feature = "matrix-display")]
+                        CLIOutputType::MatrixDisplay(display_controller) => {
+                            display_controller.handle_song_recognized(message);
                         }
                     };
                 }
@@ -216,7 +222,7 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
             }
             GUIMessage::MicrophoneVolumePercent(_percent) => {
                 #[cfg(feature = "matrix-display")]
-                {
+                if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
                     if _percent > 1.0 {
                         display_controller.handle_microphone_volume_high();
                     } else {

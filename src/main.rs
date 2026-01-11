@@ -60,13 +60,11 @@ use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
 
-#[cfg(feature="matrix-display")]
-use rpi_led_matrix::args;
-
 //use std::io::Write;
 //use std::process::Command;
 //use std::process::Stdio;
 
+#[cfg_attr(feature = "matrix-display", macro_export)]
 macro_rules! base_app {
     () => {
     App::new("SongRec")
@@ -185,7 +183,7 @@ macro_rules! base_app {
     };
 }
 
-#[cfg(feature="gui")]
+#[cfg(feature = "gui")]
 macro_rules! gui_app {
     () => {
         base_app!()
@@ -220,14 +218,30 @@ macro_rules! gui_app {
     };
 }
 
-#[cfg(feature="gui")]
+#[cfg(feature = "gui")]
 macro_rules! app {
     () => { gui_app!() };
 }
 
-#[cfg(feature="matrix-display")]
+#[cfg(feature = "matrix-display")]
+#[macro_export]
 macro_rules! app {
-    () => {  args::add_matrix_args( base_app!() ) };
+    () => {
+        base_app!()
+        .subcommand(
+            rpi_led_matrix::args::add_matrix_args(
+                App::new("matrix-display")
+                    .about(gettext("Run as a command-line program listening the microphone and display recognized songs on a matrix display").as_str())
+                    .arg(
+                        Arg::with_name("audio-device")
+                            .short('d')
+                            .long("audio-device")
+                            .takes_value(true)
+                            .help(gettext("Specify the audio device to use").as_str())
+                    )
+            )
+        )        
+    };
 }
 
 #[cfg(not(any(feature = "gui", feature = "matrix-display")))]
@@ -359,6 +373,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 audio_device,
                 input_file: None,
                 output_type: CLIOutputType::JSON
+            })?;
+        },
+        #[cfg(feature="matrix-display")]
+        Some("matrix-display") => {
+            let subcommand_args = args.subcommand_matches("matrix-display").unwrap();
+            let audio_device = subcommand_args.value_of("audio-device").map(str::to_string);
+
+            cli_main(CLIParameters {
+                enable_mpris: false,
+                recognize_once: false,
+                audio_device,
+                input_file: None,
+                output_type: CLIOutputType::matrix_display(),
             })?;
         },
         #[cfg(feature="gui")]
