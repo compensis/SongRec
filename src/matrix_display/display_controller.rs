@@ -78,10 +78,10 @@ impl DisplayController {
 
     pub fn handle_song_recognized(self: &mut Self, message: Box<SongRecognizedMessage>) {
         self.matrix_display.show_song(
-            &message.song_name,
-            &message.artist_name,
-            &message.release_year,
-            &message.cover_image,
+            message.song_name,
+            message.artist_name,
+            message.release_year,
+            message.cover_image,
         );
         self.no_match_timeout_counter.start();
     }
