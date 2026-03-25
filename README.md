@@ -2,6 +2,12 @@
 
 SongRec is an open-source Shazam client for Linux, written in Rust.
 
+This repository is a fork of the original [marin-m/SongRec](https://github.com/marin-m/SongRec) project and adds a `matrix-display` feature.
+
+When SongRec runs on a Raspberry Pi 4, the `matrix-display` feature shows the album artwork of recognized songs on a connected RGB LED matrix panel. See [Matrix display usage](#matrix-display-usage) for setup and usage details.
+
+The LED matrix panel is controlled using Henner Zeller's [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix) C++ library.
+
 ![Screenshot](packaging/Screenshot.png?raw=true)
 
 Features:
@@ -200,6 +206,28 @@ The following will produce back hearable tones from a given fingerprint, that sh
 
 When using the application, you may notice that certain information will be saved to `~/.local/share/songrec` and `~/.config/songrec` (or an equivalent directory depending on your operating system), including the CSV-format list of the last recognized songs and the last selected microphone input device (so that it is chosen back when restarting the app). You may want to delete these directories in case of persistent issues.
 
+## Matrix display usage
+
+The matrix display output is activated by running SongRec with the `matrix-display` subcommand.
+
+To enable the `matrix-display` feature, build SongRec with the dedicated feature flag and without the default feature set:
+
+```bash
+cargo build --release --no-default-features --features matrix-display
+```
+
+Building with the `matrix-display` feature requires at least 4 GB of RAM.
+
+Because the [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix) library accesses Raspberry Pi hardware registers directly and depends on precise GPIO timing, the `matrix-display` subcommand should be run with root permissions. Without root, the library may need to use a more limited GPIO access method, which can cause visible flicker and lower color quality.
+
+SongRec does not define its own matrix display configuration. Instead, the `matrix-display` subcommand accepts the command-line flags provided by the `rpi-rgb-led-matrix` library and forwards them to that library. The relevant configuration options are documented in the `rpi-rgb-led-matrix` documentation: see [`Types of Displays`](https://github.com/hzeller/rpi-rgb-led-matrix/blob/master/README.md#types-of-displays) for panel configuration and [`Changing parameters via command-line flags`](https://github.com/hzeller/rpi-rgb-led-matrix/blob/master/README.md#changing-parameters-via-command-line-flags) for the full list of supported flags.
+
+For example, the following command runs SongRec on a Raspberry Pi 4 with an Adafruit HAT and a 64x64 panel:
+
+```bash
+sudo ./target/release/songrec matrix-display --gpio-mapping adafruit-hat-pwm --rows 64 --cols 64 --pwm-lsb-nanoseconds 130 --brightness 75 --slowdown-gpio 3
+```
+
 ## Privacy
 
 SongRec collects no data and contacts no other servers than Shazam's. SongRec does not upload raw audio data anywhere: only fingerprints of the audio are uploaded, which means sequences of frequency peaks encoded in the form of "(frequency, amplitude, time)" tuples.
@@ -211,4 +239,3 @@ This does not suffice to represent anything hearable alone (use the "Play a Shaz
 This software is released under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html) license. It was created with the intent of providing interoperability between the remote Shazam services and Linux-based deskop systems.
 
 Please note that in certain countries located outside of the European Union, especially the United States, software patents may apply.
-
