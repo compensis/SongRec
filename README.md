@@ -228,6 +228,21 @@ For example, the following command runs SongRec on a Raspberry Pi 4 with an Adaf
 sudo ./target/release/songrec matrix-display --gpio-mapping adafruit-hat-pwm --rows 64 --cols 64 --pwm-lsb-nanoseconds 130 --brightness 75 --slowdown-gpio 3
 ```
 
+### Display orientation mapping
+
+If an MPU-6500 orientation sensor is connected to the Raspberry Pi through I2C, SongRec automatically rotates the matrix display output to match the sensor's current orientation.
+
+The `matrix-display` subcommand also provides two optional flags for configuring how that sensor is mounted relative to the display:
+
+* `--up <axis>` defines which sensor axis should be treated as the display's upward direction.
+* `--right <axis>` defines which sensor axis should be treated as the display's right-hand direction.
+
+Both flags accept one of the following values: `x+`, `x-`, `y+`, `y-`, `z+`, `z-`. The `+` and `-` suffixes select the positive or negative direction of the corresponding sensor axis.
+
+These flags do not directly rotate the display by a fixed amount. Instead, they describe the physical mounting relationship between the orientation sensor and the LED panel. SongRec then compares the current sensor reading against the configured axes to determine whether the display content should be shown upright, rotated right, upside down, or rotated left.
+
+The default mapping is `--up y+ --right z+`, which assumes that the sensor's positive Y axis points toward the display's top edge and its positive Z axis points toward the display's right edge.
+
 ## Privacy
 
 SongRec collects no data and contacts no other servers than Shazam's. SongRec does not upload raw audio data anywhere: only fingerprints of the audio are uploaded, which means sequences of frequency peaks encoded in the form of "(frequency, amplitude, time)" tuples.
