@@ -242,20 +242,22 @@ macro_rules! app {
                             .help(gettext("Specify the audio device to use").as_str())
                     )
                     .arg(
-                        Arg::with_name("up-axis")
+                        Arg::with_name("up")
                             .long("up")
+                            .value_name("AXIS")
                             .takes_value(true)
                             .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
                             .default_value("y+")
                             .help("Sensor axis that should be treated as the display's up orientation")
                     )
                     .arg(
-                        Arg::with_name("right-axis")
+                        Arg::with_name("right")
                             .long("right")
+                            .value_name("AXIS")
                             .takes_value(true)
                             .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
                             .default_value("z+")
-                            .help("Sensor axis that should be treated as the display's up orientation")
+                            .help("Sensor axis that should be treated as the display's right orientation")
                     )
             )
         )        
@@ -402,8 +404,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         #[cfg(feature="matrix-display")]
         Some("matrix-display") => {
             let subcommand_args = args.subcommand_matches("matrix-display").unwrap();
-            let up_axis = subcommand_args.value_of("up-axis").unwrap();
-            let right_axis = subcommand_args.value_of("right-axis").unwrap();
+            let up_axis = subcommand_args.value_of("up").unwrap();
+            let right_axis = subcommand_args.value_of("right").unwrap();
             let audio_device = subcommand_args.value_of("audio-device").map(str::to_string);
 
             if axis_conflicts(up_axis, right_axis) {

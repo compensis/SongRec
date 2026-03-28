@@ -174,13 +174,19 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
 
     // Get orientation of the display to the sensor from the program's CLI arguments
     let up = subcommand_args
-        .value_of("up-axis")
+        .value_of("up")
         .and_then(Axis::from_cli)
-        .unwrap_or(Axis::YPos);
+        .unwrap_or_else(|| {
+            println!("Error: expected valid CLI argument 'up'");
+            std::process::exit(1);
+        });
     let right = subcommand_args
-        .value_of("right-axis")
+        .value_of("right")
         .and_then(Axis::from_cli)
-        .unwrap_or(Axis::ZPos);
+        .unwrap_or_else(|| {
+            println!("Error: expected valid CLI argument 'right'");
+            std::process::exit(1);
+        });
     let mapper = OrientationMapper { up, right };
     let mut orientation_sensor = OrientationSensor::new();
 
