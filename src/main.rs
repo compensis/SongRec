@@ -239,6 +239,23 @@ macro_rules! app {
                             .takes_value(true)
                             .help(gettext("Specify the audio device to use").as_str())
                     )
+                    .arg(
+                        Arg::with_name("up-axis")
+                            .long("up")
+                            .takes_value(true)
+                            .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
+                            .default_value("y+")
+                            .help("Sensor axis that should be treated as the display's up orientation")
+                    )
+                    .arg(
+                        Arg::with_name("right-axis")
+                            .long("right")
+                            .takes_value(true)
+                            .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
+                            .default_value("z+")
+                            .help("Sensor axis that should be treated as the display's up orientation")
+                    )
+                    // ToDo: up und right duürfen nicht gleich und nicht gegenläufig sein
             )
         )        
     };

@@ -62,22 +62,86 @@ impl SharedMatrixDisplayMessage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum DisplayOrientation {
+    #[default]
     Upright,
     Right,
     UpsideDown,
     Left,
 }
 
-impl From<SensorOrientation> for DisplayOrientation {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Axis {
+    XPos,
+    XNeg,
+    YPos,
+    YNeg,
+    ZPos,
+    ZNeg,
+}
+
+impl Axis {
+    fn opposite(self) -> Self {
+        use Axis::*;
+        match self {
+            XPos => XNeg,
+            XNeg => XPos,
+            YPos => YNeg,
+            YNeg => YPos,
+            ZPos => ZNeg,
+            ZNeg => ZPos,
+        }
+    }
+
+    fn from_cli(value: &str) -> Option<Self> {
+        match value {
+            "x+" => Some(Self::XPos),
+            "x-" => Some(Self::XNeg),
+            "y+" => Some(Self::YPos),
+            "y-" => Some(Self::YNeg),
+            "z+" => Some(Self::ZPos),
+            "z-" => Some(Self::ZNeg),
+            _ => None,
+        }
+    }
+}
+
+impl From<SensorOrientation> for Axis {
     fn from(orientation: SensorOrientation) -> Self {
+        use Axis::*;
+        use SensorOrientation::*;
         match orientation {
-            SensorOrientation::YTop => DisplayOrientation::Upright,
-            SensorOrientation::ZTop => DisplayOrientation::Right,
-            SensorOrientation::YDown => DisplayOrientation::UpsideDown,
-            SensorOrientation::ZDown => DisplayOrientation::Left,
-            _ => DisplayOrientation::Upright,
+            XTop => XPos,
+            XDown => XNeg,
+            YTop => YPos,
+            YDown => YNeg,
+            ZTop => ZPos,
+            ZDown => ZNeg,
+        }
+    }
+}
+
+pub struct OrientationMapper {
+    up: Axis,
+    right: Axis,
+}
+
+impl OrientationMapper {
+    fn to_display_orientation(&self, orientation: SensorOrientation) -> DisplayOrientation {
+        use DisplayOrientation::*;
+        let axis = Axis::from(orientation);
+
+        if axis == self.up {
+            Upright
+        } else if axis == self.right {
+            Right
+        } else if axis == self.up.opposite() {
+            UpsideDown
+        } else if axis == self.right.opposite() {
+            Left
+        } else {
+            DisplayOrientation::default()
         }
     }
 }
@@ -99,6 +163,25 @@ fn read_orientation<'a>(
 }
 
 pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
+    // Get the program's CLI arguments
+    let args = crate::app!().get_matches();
+    let subcommand_args = args
+        .subcommand_matches("matrix-display")
+        .unwrap_or_else(|| {
+            println!("Error: expected CLI subcommand 'matrix-display'");
+            std::process::exit(1);
+        });
+
+    // Get orientation of the display to the sensor from the program's CLI arguments
+    let up = subcommand_args
+        .value_of("up-axis")
+        .and_then(Axis::from_cli)
+        .unwrap_or(Axis::YPos);
+    let right = subcommand_args
+        .value_of("right-axis")
+        .and_then(Axis::from_cli)
+        .unwrap_or(Axis::ZPos);
+    let mapper = OrientationMapper { up, right };
     let mut orientation_sensor = OrientationSensor::new();
 
     let orientation = read_orientation(&mut orientation_sensor);
@@ -112,15 +195,10 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
         }
     }
 
-    let orientation = orientation.map(DisplayOrientation::from);
+    let orientation = orientation.map(|o| mapper.to_display_orientation(o));
     println!("Display Orientation: {:?}", orientation);
 
     // Read matrix configuration from the program's CLI arguments
-    let args = crate::app!().get_matches();
-    let subcommand_args = args.subcommand_matches("matrix-display").unwrap_or_else(| | {
-        println!("Error: expected CLI subcommand 'matrix-display'");
-        std::process::exit(1);
-    });
     let (options, runtime_options) = matrix_options_from_args(&subcommand_args);
 
     let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap_or_else(|e| {
@@ -154,8 +232,8 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                     release_year,
                     cover_image,
                 } => {
-                    let orientation =
-                        read_orientation(&mut orientation_sensor).map(DisplayOrientation::from);
+                    let orientation = read_orientation(&mut orientation_sensor)
+                        .map(|o| mapper.to_display_orientation(o));
                     match (orientation, cover_image) {
                         (Ok(DisplayOrientation::Upright), _) | (Err(_), _) | (_, None) => {
                             show_info(song_name, artist, release_year, &font, &mut canvas)
