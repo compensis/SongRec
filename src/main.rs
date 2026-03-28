@@ -59,6 +59,8 @@ use crate::cli::cli_main::{cli_main, CLIParameters, CLIOutputType};
 use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
+#[cfg(feature = "matrix-display")]
+use clap::ErrorKind;
 
 //use std::io::Write;
 //use std::process::Command;
@@ -255,7 +257,6 @@ macro_rules! app {
                             .default_value("z+")
                             .help("Sensor axis that should be treated as the display's up orientation")
                     )
-                    // ToDo: up und right duürfen nicht gleich und nicht gegenläufig sein
             )
         )        
     };
@@ -264,6 +265,12 @@ macro_rules! app {
 #[cfg(not(any(feature = "gui", feature = "matrix-display")))]
 macro_rules! app {
     () => { base_app!() };
+}
+
+#[cfg(feature = "matrix-display")]
+fn axis_conflicts(up_axis: &str, right_axis: &str) -> bool {
+    // Up and right must not use the same physical axis (x, y, or z), regardless of direction.
+    up_axis.as_bytes()[0] == right_axis.as_bytes()[0]
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -395,7 +402,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         #[cfg(feature="matrix-display")]
         Some("matrix-display") => {
             let subcommand_args = args.subcommand_matches("matrix-display").unwrap();
+            let up_axis = subcommand_args.value_of("up-axis").unwrap();
+            let right_axis = subcommand_args.value_of("right-axis").unwrap();
             let audio_device = subcommand_args.value_of("audio-device").map(str::to_string);
+
+            if axis_conflicts(up_axis, right_axis) {
+                app!().error(
+                        ErrorKind::ArgumentConflict,
+                        "The --up and --right axes must not use the same axis (x, y, or z)",
+                    )
+                    .exit();
+            }
 
             cli_main(CLIParameters {
                 enable_mpris: false,
