@@ -144,6 +144,10 @@ impl OrientationMapper {
             DisplayOrientation::default()
         }
     }
+
+    fn map_orientation<E>(&self, orientation: Result<SensorOrientation, E>) -> Result<DisplayOrientation, E> {
+        orientation.map(|o| self.to_display_orientation(o))
+    }
 }
 
 #[derive(Debug)]
@@ -201,7 +205,7 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
         }
     }
 
-    let orientation = orientation.map(|o| mapper.to_display_orientation(o));
+    let orientation = mapper.map_orientation(orientation);
     println!("Display Orientation: {:?}", orientation);
 
     // Read matrix configuration from the program's CLI arguments
@@ -238,8 +242,8 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
                     release_year,
                     cover_image,
                 } => {
-                    let orientation = read_orientation(&mut orientation_sensor)
-                        .map(|o| mapper.to_display_orientation(o));
+                    let sensor_orientation = read_orientation(&mut orientation_sensor);
+                    let orientation = mapper.map_orientation(sensor_orientation);
                     match (orientation, cover_image) {
                         (Ok(DisplayOrientation::Upright), _) | (Err(_), _) | (_, None) => {
                             show_info(song_name, artist, release_year, &font, &mut canvas)
