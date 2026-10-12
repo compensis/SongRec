@@ -19,6 +19,7 @@ Features:
 * Continuous song detection from the microphone, with the ability to choose your input device.
 * Ability to recognize songs from your speakers rather than your microphone (on compatible PulseAudio setups).
 * Generate a lure from a song that, when played, will fool Shazam into thinking that it is the concerned song.
+* Support for displaying album artwork on a RGB LED matrix panel connected to a Raspberry Pi 4 (see [Matrix display usage](#matrix-display-usage)).
 
 A (command-line only) Python version, which I made before rewriting in Rust for performance, is also available for demonstration purposes. It supports file recognition only.
 
