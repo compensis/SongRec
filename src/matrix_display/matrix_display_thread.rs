@@ -209,7 +209,8 @@ pub fn matrix_display_thread(shared_message: SharedMatrixDisplayMessage) {
     println!("Display Orientation: {:?}", orientation);
 
     // Read matrix configuration from the program's CLI arguments
-    let (options, runtime_options) = matrix_options_from_args(&subcommand_args);
+    let (options, mut runtime_options) = matrix_options_from_args(&subcommand_args);
+    runtime_options.set_drop_priv_group("audio");
 
     let matrix = LedMatrix::new(Some(options), Some(runtime_options)).unwrap_or_else(|e| {
         println!("Error initializing the matrix display: {}", e);
