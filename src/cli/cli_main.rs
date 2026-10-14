@@ -11,9 +11,12 @@ use glib::clone;
 use mpris_player::PlaybackStatus;
 
 use crate::core::http_thread::http_thread;
-use crate::core::microphone_thread::microphone_thread;
+use crate::core::microphone_thread::{microphone_thread};
 use crate::core::processing_thread::processing_thread;
 use crate::core::thread_messages::{GUIMessage, MicrophoneMessage, ProcessingMessage, SongRecognizedMessage};
+
+#[cfg(feature = "matrix-display")]
+use crate::matrix_display::display_controller::{DisplayController, NoMatchResult};
 
 use crate::utils::csv_song_history::SongHistoryRecord;
 use crate::utils::mpris_player::{get_player, update_song};
@@ -23,6 +26,15 @@ pub enum CLIOutputType {
     SongName,
     JSON,
     CSV,
+    #[cfg(feature = "matrix-display")]
+    MatrixDisplay(DisplayController),
+}
+
+#[cfg(feature = "matrix-display")]
+impl CLIOutputType {
+    pub fn matrix_display() -> Self {
+        Self::MatrixDisplay(DisplayController::new())
+    }
 }
 
 pub struct CLIParameters {
@@ -33,7 +45,7 @@ pub struct CLIParameters {
     pub output_type: CLIOutputType,
 }
 
-pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
+pub fn cli_main(mut parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
     glib::MainContext::default().acquire();
     let main_loop = Arc::new(glib::MainLoop::new(None, false));
 
@@ -138,10 +150,23 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     main_loop_cli.quit();
                     return glib::Continue(false);
                 }
+                #[cfg(feature = "matrix-display")]
+                if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
+                    let mut last_track_borrow = last_track.borrow_mut();
+                    if string == gettext("No match for this song") {
+                        if let NoMatchResult::Reset = display_controller.handle_no_match() {
+                            *last_track_borrow = None;
+                        }
+                    }
+                }
             }
             GUIMessage::MicrophoneRecording => {
                 if !do_recognize_once {
                     eprintln!("{}", gettext("Recording started!"));
+                    #[cfg(feature = "matrix-display")]
+                    if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
+                        display_controller.handle_recording_started();
+                    }
                 }
             }
             GUIMessage::SongRecognized(message) => {
@@ -154,15 +179,15 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     *last_track_borrow = track_key;
 
                     let song_name = &message.song_name;
-                    let artist_name= &message.artist_name;
-    
+                    let artist_name = &message.artist_name;
+
                     #[cfg(feature = "textwrap")]
                     let song_name = &textwrap::fill(&song_name, textwrap::termwidth());
-    
+
                     #[cfg(feature = "textwrap")]
                     let artist_name = &textwrap::fill(&artist_name, textwrap::termwidth());
 
-                    match parameters.output_type {
+                    match &mut parameters.output_type {
                         CLIOutputType::JSON => {
                             println!("{}", message.shazam_json);
                         }
@@ -170,16 +195,22 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                             csv_writer.serialize(get_song_history_record(message)).unwrap();
                             csv_writer.flush().unwrap();
                         }
-                        #[cfg(not(feature = "slowprint"))]
                         CLIOutputType::SongName => {
-                            println!("{} - {}", artist_name, song_name);
+                            #[cfg(not(feature = "slowprint"))]
+                            {
+                                println!("{} - {}", artist_name, song_name);
+                            }
+                            #[cfg(feature = "slowprint")]
+                            {
+                                clearscreen::clear().unwrap();
+                                let delay = std::time::Duration::from_millis(100);
+                                slowprint::slow_println(song_name, delay);
+                                slowprint::slow_println(artist_name, delay);
+                            }
                         }
-                        #[cfg(feature = "slowprint")]
-                        CLIOutputType::SongName => {
-                            clearscreen::clear().unwrap();
-                            let delay = std::time::Duration::from_millis(100);
-                            slowprint::slow_println(song_name, delay);
-                            slowprint::slow_println(artist_name, delay);
+                        #[cfg(feature = "matrix-display")]
+                        CLIOutputType::MatrixDisplay(display_controller) => {
+                            display_controller.handle_song_recognized(message);
                         }
                     };
                 }
@@ -189,7 +220,16 @@ pub fn cli_main(parameters: CLIParameters) -> Result<(), Box<dyn Error>> {
                     return glib::Continue(false);
                 }
             }
-            GUIMessage::MicrophoneVolumePercent(_percent) => {}
+            GUIMessage::MicrophoneVolumePercent(_percent) => {
+                #[cfg(feature = "matrix-display")]
+                if let CLIOutputType::MatrixDisplay(display_controller) = &mut parameters.output_type {
+                    if _percent > 1.0 {
+                        display_controller.handle_microphone_volume_high();
+                    } else {
+                        display_controller.handle_microphone_volume_low();
+                    }
+                }
+            }
             #[cfg(feature = "gui")]
             _ => {}
         }

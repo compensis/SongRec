@@ -27,6 +27,14 @@ mod cli {
     pub mod cli_main;
 }
 
+#[cfg(feature = "matrix-display")]
+mod matrix_display {   
+    mod matrix_display;
+    pub mod display_controller;
+    mod matrix_display_thread;
+    mod orientation_sensor;
+}
+
 mod utils {
     #[cfg(feature = "gui")]
     pub mod pulseaudio_loopback;
@@ -51,7 +59,14 @@ use crate::cli::cli_main::{cli_main, CLIParameters, CLIOutputType};
 use std::error::Error;
 use gettextrs::gettext;
 use clap::{App, Arg};
+#[cfg(feature = "matrix-display")]
+use clap::ErrorKind;
 
+//use std::io::Write;
+//use std::process::Command;
+//use std::process::Stdio;
+
+#[cfg_attr(feature = "matrix-display", macro_export)]
 macro_rules! base_app {
     () => {
     App::new("SongRec")
@@ -165,12 +180,12 @@ macro_rules! base_app {
                     Arg::with_name("output_file")
                         .required(false)
                         .help(gettext("File path of the .WAV file to write tones to, or nothing to play back the sound instantly.").as_str())
-                )
         )
+    )
     };
 }
 
-#[cfg(feature="gui")]
+#[cfg(feature = "gui")]
 macro_rules! gui_app {
     () => {
         base_app!()
@@ -205,20 +220,64 @@ macro_rules! gui_app {
     };
 }
 
-#[cfg(feature="gui")]
+#[cfg(feature = "gui")]
 macro_rules! app {
     () => { gui_app!() };
 }
 
-#[cfg(not(feature="gui"))]
+#[cfg(feature = "matrix-display")]
+#[macro_export]
+macro_rules! app {
+    () => {
+        base_app!()
+        .subcommand(
+            rpi_led_matrix::args::add_matrix_args(
+                App::new("matrix-display")
+                    .about(gettext("Run as a command-line program listening the microphone and display recognized songs on a matrix display").as_str())
+                    .arg(
+                        Arg::with_name("audio-device")
+                            .short('d')
+                            .long("audio-device")
+                            .takes_value(true)
+                            .help(gettext("Specify the audio device to use").as_str())
+                    )
+                    .arg(
+                        Arg::with_name("up")
+                            .long("up")
+                            .value_name("AXIS")
+                            .takes_value(true)
+                            .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
+                            .default_value("y+")
+                            .help("Sensor axis that should be treated as the display's up orientation")
+                    )
+                    .arg(
+                        Arg::with_name("right")
+                            .long("right")
+                            .value_name("AXIS")
+                            .takes_value(true)
+                            .possible_values(&["x+", "x-", "y+", "y-", "z+", "z-"])
+                            .default_value("z+")
+                            .help("Sensor axis that should be treated as the display's right orientation")
+                    )
+            )
+        )        
+    };
+}
+
+#[cfg(not(any(feature = "gui", feature = "matrix-display")))]
 macro_rules! app {
     () => { base_app!() };
+}
+
+#[cfg(feature = "matrix-display")]
+fn axis_conflicts(up_axis: &str, right_axis: &str) -> bool {
+    // Up and right must not use the same physical axis (x, y, or z), regardless of direction.
+    up_axis.as_bytes()[0] == right_axis.as_bytes()[0]
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Set up the translation/internationalization part
-
     setup_internationalization();
 
     // Collect the program arguments
@@ -319,7 +378,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 recognize_once: true,
                 audio_device,
                 input_file,
-
                 output_type: if enable_json {
                     CLIOutputType::JSON
                 }
@@ -341,6 +399,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                 audio_device,
                 input_file: None,
                 output_type: CLIOutputType::JSON
+            })?;
+        },
+        #[cfg(feature="matrix-display")]
+        Some("matrix-display") => {
+            let subcommand_args = args.subcommand_matches("matrix-display").unwrap();
+            let up_axis = subcommand_args.value_of("up").unwrap();
+            let right_axis = subcommand_args.value_of("right").unwrap();
+            let audio_device = subcommand_args.value_of("audio-device").map(str::to_string);
+
+            if axis_conflicts(up_axis, right_axis) {
+                app!().error(
+                        ErrorKind::ArgumentConflict,
+                        "The --up and --right axes must not use the same axis (x, y, or z)",
+                    )
+                    .exit();
+            }
+
+            cli_main(CLIParameters {
+                enable_mpris: false,
+                recognize_once: false,
+                audio_device,
+                input_file: None,
+                output_type: CLIOutputType::matrix_display(),
             })?;
         },
         #[cfg(feature="gui")]
